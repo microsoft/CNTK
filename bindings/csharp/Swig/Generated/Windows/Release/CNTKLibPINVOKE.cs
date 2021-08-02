@@ -33,7 +33,7 @@ class CNTKLibPINVOKE {
     static ExceptionArgumentDelegate argumentNullDelegate = new ExceptionArgumentDelegate(SetPendingArgumentNullException);
     static ExceptionArgumentDelegate argumentOutOfRangeDelegate = new ExceptionArgumentDelegate(SetPendingArgumentOutOfRangeException);
 
-    [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="SWIGRegisterExceptionCallbacks_CNTKLib")]
+    [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="SWIGRegisterExceptionCallbacks_CNTKLib")]
     public static extern void SWIGRegisterExceptionCallbacks_CNTKLib(
                                 ExceptionDelegate applicationDelegate,
                                 ExceptionDelegate arithmeticDelegate,
@@ -47,7 +47,7 @@ class CNTKLibPINVOKE {
                                 ExceptionDelegate overflowDelegate, 
                                 ExceptionDelegate systemExceptionDelegate);
 
-    [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="SWIGRegisterExceptionArgumentCallbacks_CNTKLib")]
+    [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="SWIGRegisterExceptionArgumentCallbacks_CNTKLib")]
     public static extern void SWIGRegisterExceptionCallbacksArgument_CNTKLib(
                                 ExceptionArgumentDelegate argumentDelegate,
                                 ExceptionArgumentDelegate argumentNullDelegate,
@@ -169,7 +169,7 @@ class CNTKLibPINVOKE {
     public delegate string SWIGStringDelegate(string message);
     static SWIGStringDelegate stringDelegate = new SWIGStringDelegate(CreateString);
 
-    [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="SWIGRegisterStringCallback_CNTKLib")]
+    [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="SWIGRegisterStringCallback_CNTKLib")]
     public static extern void SWIGRegisterStringCallback_CNTKLib(SWIGStringDelegate stringDelegate);
 
     static string CreateString(string cString) {
@@ -193,7 +193,7 @@ class CNTKLibPINVOKE {
     public delegate string SWIGWStringDelegate(global::System.IntPtr message);
     static SWIGWStringDelegate wstringDelegate = new SWIGWStringDelegate(CreateWString);
 
-    [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="SWIGRegisterWStringCallback_CNTKLib")]
+    [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="SWIGRegisterWStringCallback_CNTKLib")]
     public static extern void SWIGRegisterWStringCallback_CNTKLib(SWIGWStringDelegate wstringDelegate);
 
     static string CreateWString([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]global::System.IntPtr cString) {
@@ -208,5863 +208,5863 @@ class CNTKLibPINVOKE {
   static protected SWIGWStringHelper swigWStringHelper = new SWIGWStringHelper();
 
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_Clear")]
   public static extern void CharVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_Add")]
   public static extern void CharVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, char jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_size")]
   public static extern uint CharVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_capacity")]
   public static extern uint CharVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_reserve")]
   public static extern void CharVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_CharVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_CharVector__SWIG_0")]
   public static extern global::System.IntPtr new_CharVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_CharVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_CharVector__SWIG_1")]
   public static extern global::System.IntPtr new_CharVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_CharVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_CharVector__SWIG_2")]
   public static extern global::System.IntPtr new_CharVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_getitemcopy")]
   public static extern char CharVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_getitem")]
   public static extern char CharVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_setitem")]
   public static extern void CharVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, char jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_AddRange")]
   public static extern void CharVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_GetRange")]
   public static extern global::System.IntPtr CharVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_Insert")]
   public static extern void CharVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, char jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_InsertRange")]
   public static extern void CharVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_RemoveAt")]
   public static extern void CharVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_RemoveRange")]
   public static extern void CharVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_Repeat")]
   public static extern global::System.IntPtr CharVector_Repeat(char jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_Reverse__SWIG_0")]
   public static extern void CharVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_Reverse__SWIG_1")]
   public static extern void CharVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_SetRange")]
   public static extern void CharVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_Contains")]
   public static extern bool CharVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, char jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_IndexOf")]
   public static extern int CharVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, char jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_LastIndexOf")]
   public static extern int CharVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, char jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CharVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CharVector_Remove")]
   public static extern bool CharVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, char jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_CharVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_CharVector")]
   public static extern void delete_CharVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_Clear")]
   public static extern void IntVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_Add")]
   public static extern void IntVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_size")]
   public static extern uint IntVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_capacity")]
   public static extern uint IntVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_reserve")]
   public static extern void IntVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_IntVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_IntVector__SWIG_0")]
   public static extern global::System.IntPtr new_IntVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_IntVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_IntVector__SWIG_1")]
   public static extern global::System.IntPtr new_IntVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_IntVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_IntVector__SWIG_2")]
   public static extern global::System.IntPtr new_IntVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_getitemcopy")]
   public static extern int IntVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_getitem")]
   public static extern int IntVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_setitem")]
   public static extern void IntVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_AddRange")]
   public static extern void IntVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_GetRange")]
   public static extern global::System.IntPtr IntVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_Insert")]
   public static extern void IntVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_InsertRange")]
   public static extern void IntVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_RemoveAt")]
   public static extern void IntVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_RemoveRange")]
   public static extern void IntVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_Repeat")]
   public static extern global::System.IntPtr IntVector_Repeat(int jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_Reverse__SWIG_0")]
   public static extern void IntVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_Reverse__SWIG_1")]
   public static extern void IntVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_SetRange")]
   public static extern void IntVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_Contains")]
   public static extern bool IntVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_IndexOf")]
   public static extern int IntVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_LastIndexOf")]
   public static extern int IntVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IntVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IntVector_Remove")]
   public static extern bool IntVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_IntVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_IntVector")]
   public static extern void delete_IntVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_Clear")]
   public static extern void SizeTVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_Add")]
   public static extern void SizeTVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_size")]
   public static extern uint SizeTVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_capacity")]
   public static extern uint SizeTVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_reserve")]
   public static extern void SizeTVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_SizeTVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_SizeTVector__SWIG_0")]
   public static extern global::System.IntPtr new_SizeTVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_SizeTVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_SizeTVector__SWIG_1")]
   public static extern global::System.IntPtr new_SizeTVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_SizeTVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_SizeTVector__SWIG_2")]
   public static extern global::System.IntPtr new_SizeTVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_getitemcopy")]
   public static extern uint SizeTVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_getitem")]
   public static extern uint SizeTVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_setitem")]
   public static extern void SizeTVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_AddRange")]
   public static extern void SizeTVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_GetRange")]
   public static extern global::System.IntPtr SizeTVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_Insert")]
   public static extern void SizeTVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_InsertRange")]
   public static extern void SizeTVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_RemoveAt")]
   public static extern void SizeTVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_RemoveRange")]
   public static extern void SizeTVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_Repeat")]
   public static extern global::System.IntPtr SizeTVector_Repeat(uint jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_Reverse__SWIG_0")]
   public static extern void SizeTVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_Reverse__SWIG_1")]
   public static extern void SizeTVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_SetRange")]
   public static extern void SizeTVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_Contains")]
   public static extern bool SizeTVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_IndexOf")]
   public static extern int SizeTVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_LastIndexOf")]
   public static extern int SizeTVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVector_Remove")]
   public static extern bool SizeTVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_SizeTVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_SizeTVector")]
   public static extern void delete_SizeTVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_Clear")]
   public static extern void DoubleVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_Add")]
   public static extern void DoubleVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_size")]
   public static extern uint DoubleVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_capacity")]
   public static extern uint DoubleVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_reserve")]
   public static extern void DoubleVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DoubleVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DoubleVector__SWIG_0")]
   public static extern global::System.IntPtr new_DoubleVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DoubleVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DoubleVector__SWIG_1")]
   public static extern global::System.IntPtr new_DoubleVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DoubleVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DoubleVector__SWIG_2")]
   public static extern global::System.IntPtr new_DoubleVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_getitemcopy")]
   public static extern double DoubleVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_getitem")]
   public static extern double DoubleVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_setitem")]
   public static extern void DoubleVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_AddRange")]
   public static extern void DoubleVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_GetRange")]
   public static extern global::System.IntPtr DoubleVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_Insert")]
   public static extern void DoubleVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_InsertRange")]
   public static extern void DoubleVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_RemoveAt")]
   public static extern void DoubleVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_RemoveRange")]
   public static extern void DoubleVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_Repeat")]
   public static extern global::System.IntPtr DoubleVector_Repeat(double jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_Reverse__SWIG_0")]
   public static extern void DoubleVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_Reverse__SWIG_1")]
   public static extern void DoubleVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_SetRange")]
   public static extern void DoubleVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_Contains")]
   public static extern bool DoubleVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_IndexOf")]
   public static extern int DoubleVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_LastIndexOf")]
   public static extern int DoubleVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVector_Remove")]
   public static extern bool DoubleVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_DoubleVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_DoubleVector")]
   public static extern void delete_DoubleVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_Clear")]
   public static extern void FloatVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_Add")]
   public static extern void FloatVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_size")]
   public static extern uint FloatVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_capacity")]
   public static extern uint FloatVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_reserve")]
   public static extern void FloatVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_FloatVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_FloatVector__SWIG_0")]
   public static extern global::System.IntPtr new_FloatVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_FloatVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_FloatVector__SWIG_1")]
   public static extern global::System.IntPtr new_FloatVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_FloatVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_FloatVector__SWIG_2")]
   public static extern global::System.IntPtr new_FloatVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_getitemcopy")]
   public static extern float FloatVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_getitem")]
   public static extern float FloatVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_setitem")]
   public static extern void FloatVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, float jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_AddRange")]
   public static extern void FloatVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_GetRange")]
   public static extern global::System.IntPtr FloatVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_Insert")]
   public static extern void FloatVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, float jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_InsertRange")]
   public static extern void FloatVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_RemoveAt")]
   public static extern void FloatVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_RemoveRange")]
   public static extern void FloatVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_Repeat")]
   public static extern global::System.IntPtr FloatVector_Repeat(float jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_Reverse__SWIG_0")]
   public static extern void FloatVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_Reverse__SWIG_1")]
   public static extern void FloatVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_SetRange")]
   public static extern void FloatVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_Contains")]
   public static extern bool FloatVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_IndexOf")]
   public static extern int FloatVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_LastIndexOf")]
   public static extern int FloatVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVector_Remove")]
   public static extern bool FloatVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_FloatVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_FloatVector")]
   public static extern void delete_FloatVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_Clear")]
   public static extern void VariableVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_Add")]
   public static extern void VariableVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_size")]
   public static extern uint VariableVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_capacity")]
   public static extern uint VariableVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_reserve")]
   public static extern void VariableVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VariableVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VariableVector__SWIG_0")]
   public static extern global::System.IntPtr new_VariableVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VariableVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VariableVector__SWIG_1")]
   public static extern global::System.IntPtr new_VariableVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VariableVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VariableVector__SWIG_2")]
   public static extern global::System.IntPtr new_VariableVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_getitemcopy")]
   public static extern global::System.IntPtr VariableVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_getitem")]
   public static extern global::System.IntPtr VariableVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_setitem")]
   public static extern void VariableVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_AddRange")]
   public static extern void VariableVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_GetRange")]
   public static extern global::System.IntPtr VariableVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_Insert")]
   public static extern void VariableVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_InsertRange")]
   public static extern void VariableVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_RemoveAt")]
   public static extern void VariableVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_RemoveRange")]
   public static extern void VariableVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_Repeat")]
   public static extern global::System.IntPtr VariableVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_Reverse__SWIG_0")]
   public static extern void VariableVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_Reverse__SWIG_1")]
   public static extern void VariableVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_SetRange")]
   public static extern void VariableVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_Contains")]
   public static extern bool VariableVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_IndexOf")]
   public static extern int VariableVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_LastIndexOf")]
   public static extern int VariableVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableVector_Remove")]
   public static extern bool VariableVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_VariableVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_VariableVector")]
   public static extern void delete_VariableVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_Clear")]
   public static extern void AxisVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_Add")]
   public static extern void AxisVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_size")]
   public static extern uint AxisVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_capacity")]
   public static extern uint AxisVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_reserve")]
   public static extern void AxisVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_AxisVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_AxisVector__SWIG_0")]
   public static extern global::System.IntPtr new_AxisVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_AxisVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_AxisVector__SWIG_1")]
   public static extern global::System.IntPtr new_AxisVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_AxisVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_AxisVector__SWIG_2")]
   public static extern global::System.IntPtr new_AxisVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_getitemcopy")]
   public static extern global::System.IntPtr AxisVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_getitem")]
   public static extern global::System.IntPtr AxisVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_setitem")]
   public static extern void AxisVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_AddRange")]
   public static extern void AxisVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_GetRange")]
   public static extern global::System.IntPtr AxisVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_Insert")]
   public static extern void AxisVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_InsertRange")]
   public static extern void AxisVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_RemoveAt")]
   public static extern void AxisVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_RemoveRange")]
   public static extern void AxisVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_Repeat")]
   public static extern global::System.IntPtr AxisVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_Reverse__SWIG_0")]
   public static extern void AxisVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_Reverse__SWIG_1")]
   public static extern void AxisVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_SetRange")]
   public static extern void AxisVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_Contains")]
   public static extern bool AxisVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_IndexOf")]
   public static extern int AxisVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_LastIndexOf")]
   public static extern int AxisVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AxisVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AxisVector_Remove")]
   public static extern bool AxisVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_AxisVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_AxisVector")]
   public static extern void delete_AxisVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Clear")]
   public static extern void NDArrayViewPtrVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Add")]
   public static extern void NDArrayViewPtrVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_size")]
   public static extern uint NDArrayViewPtrVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_capacity")]
   public static extern uint NDArrayViewPtrVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_reserve")]
   public static extern void NDArrayViewPtrVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayViewPtrVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayViewPtrVector__SWIG_0")]
   public static extern global::System.IntPtr new_NDArrayViewPtrVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayViewPtrVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayViewPtrVector__SWIG_1")]
   public static extern global::System.IntPtr new_NDArrayViewPtrVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayViewPtrVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayViewPtrVector__SWIG_2")]
   public static extern global::System.IntPtr new_NDArrayViewPtrVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_getitemcopy")]
   public static extern global::System.IntPtr NDArrayViewPtrVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_getitem")]
   public static extern global::System.IntPtr NDArrayViewPtrVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_setitem")]
   public static extern void NDArrayViewPtrVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_AddRange")]
   public static extern void NDArrayViewPtrVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_GetRange")]
   public static extern global::System.IntPtr NDArrayViewPtrVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Insert")]
   public static extern void NDArrayViewPtrVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_InsertRange")]
   public static extern void NDArrayViewPtrVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_RemoveAt")]
   public static extern void NDArrayViewPtrVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_RemoveRange")]
   public static extern void NDArrayViewPtrVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Repeat")]
   public static extern global::System.IntPtr NDArrayViewPtrVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Reverse__SWIG_0")]
   public static extern void NDArrayViewPtrVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Reverse__SWIG_1")]
   public static extern void NDArrayViewPtrVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_SetRange")]
   public static extern void NDArrayViewPtrVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Contains")]
   public static extern bool NDArrayViewPtrVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_IndexOf")]
   public static extern int NDArrayViewPtrVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_LastIndexOf")]
   public static extern int NDArrayViewPtrVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayViewPtrVector_Remove")]
   public static extern bool NDArrayViewPtrVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_NDArrayViewPtrVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_NDArrayViewPtrVector")]
   public static extern void delete_NDArrayViewPtrVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_Clear")]
   public static extern void BoolVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_Add")]
   public static extern void BoolVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_size")]
   public static extern uint BoolVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_capacity")]
   public static extern uint BoolVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_reserve")]
   public static extern void BoolVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_BoolVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_BoolVector__SWIG_0")]
   public static extern global::System.IntPtr new_BoolVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_BoolVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_BoolVector__SWIG_1")]
   public static extern global::System.IntPtr new_BoolVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_BoolVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_BoolVector__SWIG_2")]
   public static extern global::System.IntPtr new_BoolVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_getitemcopy")]
   public static extern bool BoolVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_getitem")]
   public static extern bool BoolVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_setitem")]
   public static extern void BoolVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_AddRange")]
   public static extern void BoolVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_GetRange")]
   public static extern global::System.IntPtr BoolVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_Insert")]
   public static extern void BoolVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_InsertRange")]
   public static extern void BoolVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_RemoveAt")]
   public static extern void BoolVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_RemoveRange")]
   public static extern void BoolVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_Repeat")]
   public static extern global::System.IntPtr BoolVector_Repeat(bool jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_Reverse__SWIG_0")]
   public static extern void BoolVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_Reverse__SWIG_1")]
   public static extern void BoolVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_SetRange")]
   public static extern void BoolVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_Contains")]
   public static extern bool BoolVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_IndexOf")]
   public static extern int BoolVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_LastIndexOf")]
   public static extern int BoolVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BoolVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BoolVector_Remove")]
   public static extern bool BoolVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_BoolVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_BoolVector")]
   public static extern void delete_BoolVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Clear")]
   public static extern void DeviceDescriptorVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Add")]
   public static extern void DeviceDescriptorVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_size")]
   public static extern uint DeviceDescriptorVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_capacity")]
   public static extern uint DeviceDescriptorVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_reserve")]
   public static extern void DeviceDescriptorVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DeviceDescriptorVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DeviceDescriptorVector__SWIG_0")]
   public static extern global::System.IntPtr new_DeviceDescriptorVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DeviceDescriptorVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DeviceDescriptorVector__SWIG_1")]
   public static extern global::System.IntPtr new_DeviceDescriptorVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DeviceDescriptorVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DeviceDescriptorVector__SWIG_2")]
   public static extern global::System.IntPtr new_DeviceDescriptorVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_getitemcopy")]
   public static extern global::System.IntPtr DeviceDescriptorVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_getitem")]
   public static extern global::System.IntPtr DeviceDescriptorVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_setitem")]
   public static extern void DeviceDescriptorVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_AddRange")]
   public static extern void DeviceDescriptorVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_GetRange")]
   public static extern global::System.IntPtr DeviceDescriptorVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Insert")]
   public static extern void DeviceDescriptorVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_InsertRange")]
   public static extern void DeviceDescriptorVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_RemoveAt")]
   public static extern void DeviceDescriptorVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_RemoveRange")]
   public static extern void DeviceDescriptorVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Repeat")]
   public static extern global::System.IntPtr DeviceDescriptorVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Reverse__SWIG_0")]
   public static extern void DeviceDescriptorVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Reverse__SWIG_1")]
   public static extern void DeviceDescriptorVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_SetRange")]
   public static extern void DeviceDescriptorVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Contains")]
   public static extern bool DeviceDescriptorVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_IndexOf")]
   public static extern int DeviceDescriptorVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_LastIndexOf")]
   public static extern int DeviceDescriptorVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptorVector_Remove")]
   public static extern bool DeviceDescriptorVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_DeviceDescriptorVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_DeviceDescriptorVector")]
   public static extern void delete_DeviceDescriptorVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Clear")]
   public static extern void SizeTVectorVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Add")]
   public static extern void SizeTVectorVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_size")]
   public static extern uint SizeTVectorVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_capacity")]
   public static extern uint SizeTVectorVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_reserve")]
   public static extern void SizeTVectorVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_SizeTVectorVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_SizeTVectorVector__SWIG_0")]
   public static extern global::System.IntPtr new_SizeTVectorVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_SizeTVectorVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_SizeTVectorVector__SWIG_1")]
   public static extern global::System.IntPtr new_SizeTVectorVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_SizeTVectorVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_SizeTVectorVector__SWIG_2")]
   public static extern global::System.IntPtr new_SizeTVectorVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_getitemcopy")]
   public static extern global::System.IntPtr SizeTVectorVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_getitem")]
   public static extern global::System.IntPtr SizeTVectorVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_setitem")]
   public static extern void SizeTVectorVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_AddRange")]
   public static extern void SizeTVectorVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_GetRange")]
   public static extern global::System.IntPtr SizeTVectorVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Insert")]
   public static extern void SizeTVectorVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_InsertRange")]
   public static extern void SizeTVectorVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_RemoveAt")]
   public static extern void SizeTVectorVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_RemoveRange")]
   public static extern void SizeTVectorVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Repeat")]
   public static extern global::System.IntPtr SizeTVectorVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Reverse__SWIG_0")]
   public static extern void SizeTVectorVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_Reverse__SWIG_1")]
   public static extern void SizeTVectorVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SizeTVectorVector_SetRange")]
   public static extern void SizeTVectorVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_SizeTVectorVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_SizeTVectorVector")]
   public static extern void delete_SizeTVectorVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Clear")]
   public static extern void FloatVectorVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Add")]
   public static extern void FloatVectorVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_size")]
   public static extern uint FloatVectorVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_capacity")]
   public static extern uint FloatVectorVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_reserve")]
   public static extern void FloatVectorVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_FloatVectorVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_FloatVectorVector__SWIG_0")]
   public static extern global::System.IntPtr new_FloatVectorVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_FloatVectorVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_FloatVectorVector__SWIG_1")]
   public static extern global::System.IntPtr new_FloatVectorVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_FloatVectorVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_FloatVectorVector__SWIG_2")]
   public static extern global::System.IntPtr new_FloatVectorVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_getitemcopy")]
   public static extern global::System.IntPtr FloatVectorVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_getitem")]
   public static extern global::System.IntPtr FloatVectorVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_setitem")]
   public static extern void FloatVectorVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_AddRange")]
   public static extern void FloatVectorVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_GetRange")]
   public static extern global::System.IntPtr FloatVectorVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Insert")]
   public static extern void FloatVectorVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_InsertRange")]
   public static extern void FloatVectorVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_RemoveAt")]
   public static extern void FloatVectorVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_RemoveRange")]
   public static extern void FloatVectorVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Repeat")]
   public static extern global::System.IntPtr FloatVectorVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Reverse__SWIG_0")]
   public static extern void FloatVectorVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_Reverse__SWIG_1")]
   public static extern void FloatVectorVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FloatVectorVector_SetRange")]
   public static extern void FloatVectorVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_FloatVectorVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_FloatVectorVector")]
   public static extern void delete_FloatVectorVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Clear")]
   public static extern void DoubleVectorVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Add")]
   public static extern void DoubleVectorVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_size")]
   public static extern uint DoubleVectorVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_capacity")]
   public static extern uint DoubleVectorVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_reserve")]
   public static extern void DoubleVectorVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DoubleVectorVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DoubleVectorVector__SWIG_0")]
   public static extern global::System.IntPtr new_DoubleVectorVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DoubleVectorVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DoubleVectorVector__SWIG_1")]
   public static extern global::System.IntPtr new_DoubleVectorVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DoubleVectorVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DoubleVectorVector__SWIG_2")]
   public static extern global::System.IntPtr new_DoubleVectorVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_getitemcopy")]
   public static extern global::System.IntPtr DoubleVectorVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_getitem")]
   public static extern global::System.IntPtr DoubleVectorVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_setitem")]
   public static extern void DoubleVectorVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_AddRange")]
   public static extern void DoubleVectorVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_GetRange")]
   public static extern global::System.IntPtr DoubleVectorVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Insert")]
   public static extern void DoubleVectorVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_InsertRange")]
   public static extern void DoubleVectorVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_RemoveAt")]
   public static extern void DoubleVectorVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_RemoveRange")]
   public static extern void DoubleVectorVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Repeat")]
   public static extern global::System.IntPtr DoubleVectorVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Reverse__SWIG_0")]
   public static extern void DoubleVectorVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_Reverse__SWIG_1")]
   public static extern void DoubleVectorVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DoubleVectorVector_SetRange")]
   public static extern void DoubleVectorVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_DoubleVectorVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_DoubleVectorVector")]
   public static extern void delete_DoubleVectorVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableValuePtr__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableValuePtr__SWIG_0")]
   public static extern global::System.IntPtr new_UnorderedMapVariableValuePtr__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableValuePtr__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableValuePtr__SWIG_1")]
   public static extern global::System.IntPtr new_UnorderedMapVariableValuePtr__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_size")]
   public static extern uint UnorderedMapVariableValuePtr_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_empty")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_empty")]
   public static extern bool UnorderedMapVariableValuePtr_empty(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_Clear")]
   public static extern void UnorderedMapVariableValuePtr_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_getitem")]
   public static extern global::System.IntPtr UnorderedMapVariableValuePtr_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_setitem")]
   public static extern void UnorderedMapVariableValuePtr_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_ContainsKey")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_ContainsKey")]
   public static extern bool UnorderedMapVariableValuePtr_ContainsKey(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_Add")]
   public static extern void UnorderedMapVariableValuePtr_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_Remove")]
   public static extern bool UnorderedMapVariableValuePtr_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_create_iterator_begin")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_create_iterator_begin")]
   public static extern global::System.IntPtr UnorderedMapVariableValuePtr_create_iterator_begin(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_get_next_key")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_get_next_key")]
   public static extern global::System.IntPtr UnorderedMapVariableValuePtr_get_next_key(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_destroy_iterator")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableValuePtr_destroy_iterator")]
   public static extern void UnorderedMapVariableValuePtr_destroy_iterator(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapVariableValuePtr")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapVariableValuePtr")]
   public static extern void delete_UnorderedMapVariableValuePtr(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableVariable__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableVariable__SWIG_0")]
   public static extern global::System.IntPtr new_UnorderedMapVariableVariable__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableVariable__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableVariable__SWIG_1")]
   public static extern global::System.IntPtr new_UnorderedMapVariableVariable__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_size")]
   public static extern uint UnorderedMapVariableVariable_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_empty")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_empty")]
   public static extern bool UnorderedMapVariableVariable_empty(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_Clear")]
   public static extern void UnorderedMapVariableVariable_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_getitem")]
   public static extern global::System.IntPtr UnorderedMapVariableVariable_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_setitem")]
   public static extern void UnorderedMapVariableVariable_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_ContainsKey")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_ContainsKey")]
   public static extern bool UnorderedMapVariableVariable_ContainsKey(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_Add")]
   public static extern void UnorderedMapVariableVariable_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_Remove")]
   public static extern bool UnorderedMapVariableVariable_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_create_iterator_begin")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_create_iterator_begin")]
   public static extern global::System.IntPtr UnorderedMapVariableVariable_create_iterator_begin(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_get_next_key")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_get_next_key")]
   public static extern global::System.IntPtr UnorderedMapVariableVariable_get_next_key(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_destroy_iterator")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableVariable_destroy_iterator")]
   public static extern void UnorderedMapVariableVariable_destroy_iterator(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapVariableVariable")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapVariableVariable")]
   public static extern void delete_UnorderedMapVariableVariable(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Clear")]
   public static extern void FunctionPtrVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Add")]
   public static extern void FunctionPtrVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_size")]
   public static extern uint FunctionPtrVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_capacity")]
   public static extern uint FunctionPtrVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_reserve")]
   public static extern void FunctionPtrVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_FunctionPtrVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_FunctionPtrVector__SWIG_0")]
   public static extern global::System.IntPtr new_FunctionPtrVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_FunctionPtrVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_FunctionPtrVector__SWIG_1")]
   public static extern global::System.IntPtr new_FunctionPtrVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_FunctionPtrVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_FunctionPtrVector__SWIG_2")]
   public static extern global::System.IntPtr new_FunctionPtrVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_getitemcopy")]
   public static extern global::System.IntPtr FunctionPtrVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_getitem")]
   public static extern global::System.IntPtr FunctionPtrVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_setitem")]
   public static extern void FunctionPtrVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_AddRange")]
   public static extern void FunctionPtrVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_GetRange")]
   public static extern global::System.IntPtr FunctionPtrVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Insert")]
   public static extern void FunctionPtrVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_InsertRange")]
   public static extern void FunctionPtrVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_RemoveAt")]
   public static extern void FunctionPtrVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_RemoveRange")]
   public static extern void FunctionPtrVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Repeat")]
   public static extern global::System.IntPtr FunctionPtrVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Reverse__SWIG_0")]
   public static extern void FunctionPtrVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_Reverse__SWIG_1")]
   public static extern void FunctionPtrVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FunctionPtrVector_SetRange")]
   public static extern void FunctionPtrVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_FunctionPtrVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_FunctionPtrVector")]
   public static extern void delete_FunctionPtrVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Clear")]
   public static extern void UnsignedCharVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Add")]
   public static extern void UnsignedCharVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, byte jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_size")]
   public static extern uint UnsignedCharVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_capacity")]
   public static extern uint UnsignedCharVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_reserve")]
   public static extern void UnsignedCharVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnsignedCharVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnsignedCharVector__SWIG_0")]
   public static extern global::System.IntPtr new_UnsignedCharVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnsignedCharVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnsignedCharVector__SWIG_1")]
   public static extern global::System.IntPtr new_UnsignedCharVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnsignedCharVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnsignedCharVector__SWIG_2")]
   public static extern global::System.IntPtr new_UnsignedCharVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_getitemcopy")]
   public static extern byte UnsignedCharVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_getitem")]
   public static extern byte UnsignedCharVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_setitem")]
   public static extern void UnsignedCharVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, byte jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_AddRange")]
   public static extern void UnsignedCharVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_GetRange")]
   public static extern global::System.IntPtr UnsignedCharVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Insert")]
   public static extern void UnsignedCharVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, byte jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_InsertRange")]
   public static extern void UnsignedCharVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_RemoveAt")]
   public static extern void UnsignedCharVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_RemoveRange")]
   public static extern void UnsignedCharVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Repeat")]
   public static extern global::System.IntPtr UnsignedCharVector_Repeat(byte jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Reverse__SWIG_0")]
   public static extern void UnsignedCharVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Reverse__SWIG_1")]
   public static extern void UnsignedCharVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_SetRange")]
   public static extern void UnsignedCharVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Contains")]
   public static extern bool UnsignedCharVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, byte jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_IndexOf")]
   public static extern int UnsignedCharVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, byte jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_LastIndexOf")]
   public static extern int UnsignedCharVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, byte jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnsignedCharVector_Remove")]
   public static extern bool UnsignedCharVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, byte jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_UnsignedCharVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_UnsignedCharVector")]
   public static extern void delete_UnsignedCharVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Clear")]
   public static extern void DictionaryVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Add")]
   public static extern void DictionaryVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_size")]
   public static extern uint DictionaryVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_capacity")]
   public static extern uint DictionaryVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_reserve")]
   public static extern void DictionaryVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryVector__SWIG_0")]
   public static extern global::System.IntPtr new_DictionaryVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryVector__SWIG_1")]
   public static extern global::System.IntPtr new_DictionaryVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryVector__SWIG_2")]
   public static extern global::System.IntPtr new_DictionaryVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_getitemcopy")]
   public static extern global::System.IntPtr DictionaryVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_getitem")]
   public static extern global::System.IntPtr DictionaryVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_setitem")]
   public static extern void DictionaryVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_AddRange")]
   public static extern void DictionaryVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_GetRange")]
   public static extern global::System.IntPtr DictionaryVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Insert")]
   public static extern void DictionaryVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_InsertRange")]
   public static extern void DictionaryVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_RemoveAt")]
   public static extern void DictionaryVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_RemoveRange")]
   public static extern void DictionaryVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Repeat")]
   public static extern global::System.IntPtr DictionaryVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Reverse__SWIG_0")]
   public static extern void DictionaryVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Reverse__SWIG_1")]
   public static extern void DictionaryVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_SetRange")]
   public static extern void DictionaryVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Contains")]
   public static extern bool DictionaryVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_IndexOf")]
   public static extern int DictionaryVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_LastIndexOf")]
   public static extern int DictionaryVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryVector_Remove")]
   public static extern bool DictionaryVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_DictionaryVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_DictionaryVector")]
   public static extern void delete_DictionaryVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStreamInformationMinibatchData__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStreamInformationMinibatchData__SWIG_0")]
   public static extern global::System.IntPtr new_UnorderedMapStreamInformationMinibatchData__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStreamInformationMinibatchData__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStreamInformationMinibatchData__SWIG_1")]
   public static extern global::System.IntPtr new_UnorderedMapStreamInformationMinibatchData__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_size")]
   public static extern uint UnorderedMapStreamInformationMinibatchData_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_empty")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_empty")]
   public static extern bool UnorderedMapStreamInformationMinibatchData_empty(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_Clear")]
   public static extern void UnorderedMapStreamInformationMinibatchData_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_getitem")]
   public static extern global::System.IntPtr UnorderedMapStreamInformationMinibatchData_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_setitem")]
   public static extern void UnorderedMapStreamInformationMinibatchData_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_ContainsKey")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_ContainsKey")]
   public static extern bool UnorderedMapStreamInformationMinibatchData_ContainsKey(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_Add")]
   public static extern void UnorderedMapStreamInformationMinibatchData_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_Remove")]
   public static extern bool UnorderedMapStreamInformationMinibatchData_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_create_iterator_begin")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_create_iterator_begin")]
   public static extern global::System.IntPtr UnorderedMapStreamInformationMinibatchData_create_iterator_begin(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_get_next_key")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_get_next_key")]
   public static extern global::System.IntPtr UnorderedMapStreamInformationMinibatchData_get_next_key(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_destroy_iterator")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationMinibatchData_destroy_iterator")]
   public static extern void UnorderedMapStreamInformationMinibatchData_destroy_iterator(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapStreamInformationMinibatchData")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapStreamInformationMinibatchData")]
   public static extern void delete_UnorderedMapStreamInformationMinibatchData(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableMinibatchData__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableMinibatchData__SWIG_0")]
   public static extern global::System.IntPtr new_UnorderedMapVariableMinibatchData__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableMinibatchData__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapVariableMinibatchData__SWIG_1")]
   public static extern global::System.IntPtr new_UnorderedMapVariableMinibatchData__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_size")]
   public static extern uint UnorderedMapVariableMinibatchData_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_empty")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_empty")]
   public static extern bool UnorderedMapVariableMinibatchData_empty(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_Clear")]
   public static extern void UnorderedMapVariableMinibatchData_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_getitem")]
   public static extern global::System.IntPtr UnorderedMapVariableMinibatchData_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_setitem")]
   public static extern void UnorderedMapVariableMinibatchData_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_ContainsKey")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_ContainsKey")]
   public static extern bool UnorderedMapVariableMinibatchData_ContainsKey(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_Add")]
   public static extern void UnorderedMapVariableMinibatchData_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_Remove")]
   public static extern bool UnorderedMapVariableMinibatchData_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_create_iterator_begin")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_create_iterator_begin")]
   public static extern global::System.IntPtr UnorderedMapVariableMinibatchData_create_iterator_begin(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_get_next_key")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_get_next_key")]
   public static extern global::System.IntPtr UnorderedMapVariableMinibatchData_get_next_key(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_destroy_iterator")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapVariableMinibatchData_destroy_iterator")]
   public static extern void UnorderedMapVariableMinibatchData_destroy_iterator(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapVariableMinibatchData")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapVariableMinibatchData")]
   public static extern void delete_UnorderedMapVariableMinibatchData(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Clear")]
   public static extern void StreamConfigurationVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Add")]
   public static extern void StreamConfigurationVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_size")]
   public static extern uint StreamConfigurationVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_capacity")]
   public static extern uint StreamConfigurationVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_reserve")]
   public static extern void StreamConfigurationVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StreamConfigurationVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StreamConfigurationVector__SWIG_0")]
   public static extern global::System.IntPtr new_StreamConfigurationVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StreamConfigurationVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StreamConfigurationVector__SWIG_1")]
   public static extern global::System.IntPtr new_StreamConfigurationVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StreamConfigurationVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StreamConfigurationVector__SWIG_2")]
   public static extern global::System.IntPtr new_StreamConfigurationVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_getitemcopy")]
   public static extern global::System.IntPtr StreamConfigurationVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_getitem")]
   public static extern global::System.IntPtr StreamConfigurationVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_setitem")]
   public static extern void StreamConfigurationVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_AddRange")]
   public static extern void StreamConfigurationVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_GetRange")]
   public static extern global::System.IntPtr StreamConfigurationVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Insert")]
   public static extern void StreamConfigurationVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_InsertRange")]
   public static extern void StreamConfigurationVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_RemoveAt")]
   public static extern void StreamConfigurationVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_RemoveRange")]
   public static extern void StreamConfigurationVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Repeat")]
   public static extern global::System.IntPtr StreamConfigurationVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Reverse__SWIG_0")]
   public static extern void StreamConfigurationVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_Reverse__SWIG_1")]
   public static extern void StreamConfigurationVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfigurationVector_SetRange")]
   public static extern void StreamConfigurationVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_StreamConfigurationVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_StreamConfigurationVector")]
   public static extern void delete_StreamConfigurationVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_Clear")]
   public static extern void ParameterVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_Add")]
   public static extern void ParameterVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_size")]
   public static extern uint ParameterVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_capacity")]
   public static extern uint ParameterVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_reserve")]
   public static extern void ParameterVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_ParameterVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_ParameterVector__SWIG_0")]
   public static extern global::System.IntPtr new_ParameterVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_ParameterVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_ParameterVector__SWIG_1")]
   public static extern global::System.IntPtr new_ParameterVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_ParameterVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_ParameterVector__SWIG_2")]
   public static extern global::System.IntPtr new_ParameterVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_getitemcopy")]
   public static extern global::System.IntPtr ParameterVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_getitem")]
   public static extern global::System.IntPtr ParameterVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_setitem")]
   public static extern void ParameterVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_AddRange")]
   public static extern void ParameterVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_GetRange")]
   public static extern global::System.IntPtr ParameterVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_Insert")]
   public static extern void ParameterVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_InsertRange")]
   public static extern void ParameterVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_RemoveAt")]
   public static extern void ParameterVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_RemoveRange")]
   public static extern void ParameterVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_Repeat")]
   public static extern global::System.IntPtr ParameterVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_Reverse__SWIG_0")]
   public static extern void ParameterVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_Reverse__SWIG_1")]
   public static extern void ParameterVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_SetRange")]
   public static extern void ParameterVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_Contains")]
   public static extern bool ParameterVector_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_IndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_IndexOf")]
   public static extern int ParameterVector_IndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_LastIndexOf")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_LastIndexOf")]
   public static extern int ParameterVector_LastIndexOf(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ParameterVector_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ParameterVector_Remove")]
   public static extern bool ParameterVector_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_ParameterVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_ParameterVector")]
   public static extern void delete_ParameterVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_Clear")]
   public static extern void ConstantVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_Add")]
   public static extern void ConstantVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_size")]
   public static extern uint ConstantVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_capacity")]
   public static extern uint ConstantVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_reserve")]
   public static extern void ConstantVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_ConstantVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_ConstantVector__SWIG_0")]
   public static extern global::System.IntPtr new_ConstantVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_ConstantVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_ConstantVector__SWIG_1")]
   public static extern global::System.IntPtr new_ConstantVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_ConstantVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_ConstantVector__SWIG_2")]
   public static extern global::System.IntPtr new_ConstantVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_getitemcopy")]
   public static extern global::System.IntPtr ConstantVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_getitem")]
   public static extern global::System.IntPtr ConstantVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_setitem")]
   public static extern void ConstantVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_AddRange")]
   public static extern void ConstantVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_GetRange")]
   public static extern global::System.IntPtr ConstantVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_Insert")]
   public static extern void ConstantVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_InsertRange")]
   public static extern void ConstantVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_RemoveAt")]
   public static extern void ConstantVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_RemoveRange")]
   public static extern void ConstantVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_Repeat")]
   public static extern global::System.IntPtr ConstantVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_Reverse__SWIG_0")]
   public static extern void ConstantVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_Reverse__SWIG_1")]
   public static extern void ConstantVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantVector_SetRange")]
   public static extern void ConstantVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_ConstantVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_ConstantVector")]
   public static extern void delete_ConstantVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_Clear")]
   public static extern void StringVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_Add")]
   public static extern void StringVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_size")]
   public static extern uint StringVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_capacity")]
   public static extern uint StringVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_reserve")]
   public static extern void StringVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StringVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StringVector__SWIG_0")]
   public static extern global::System.IntPtr new_StringVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StringVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StringVector__SWIG_1")]
   public static extern global::System.IntPtr new_StringVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StringVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StringVector__SWIG_2")]
   public static extern global::System.IntPtr new_StringVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_getitemcopy")]
   public static extern string StringVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_getitem")]
   public static extern string StringVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_setitem")]
   public static extern void StringVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_AddRange")]
   public static extern void StringVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_GetRange")]
   public static extern global::System.IntPtr StringVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_Insert")]
   public static extern void StringVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_InsertRange")]
   public static extern void StringVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_RemoveAt")]
   public static extern void StringVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_RemoveRange")]
   public static extern void StringVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_Repeat")]
   public static extern global::System.IntPtr StringVector_Repeat([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_Reverse__SWIG_0")]
   public static extern void StringVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_Reverse__SWIG_1")]
   public static extern void StringVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StringVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StringVector_SetRange")]
   public static extern void StringVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_StringVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_StringVector")]
   public static extern void delete_StringVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Clear")]
   public static extern void HTKFeatureConfigurationVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Add")]
   public static extern void HTKFeatureConfigurationVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_size")]
   public static extern uint HTKFeatureConfigurationVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_capacity")]
   public static extern uint HTKFeatureConfigurationVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_reserve")]
   public static extern void HTKFeatureConfigurationVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfigurationVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfigurationVector__SWIG_0")]
   public static extern global::System.IntPtr new_HTKFeatureConfigurationVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfigurationVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfigurationVector__SWIG_1")]
   public static extern global::System.IntPtr new_HTKFeatureConfigurationVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfigurationVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfigurationVector__SWIG_2")]
   public static extern global::System.IntPtr new_HTKFeatureConfigurationVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_getitemcopy")]
   public static extern global::System.IntPtr HTKFeatureConfigurationVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_getitem")]
   public static extern global::System.IntPtr HTKFeatureConfigurationVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_setitem")]
   public static extern void HTKFeatureConfigurationVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_AddRange")]
   public static extern void HTKFeatureConfigurationVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_GetRange")]
   public static extern global::System.IntPtr HTKFeatureConfigurationVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Insert")]
   public static extern void HTKFeatureConfigurationVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_InsertRange")]
   public static extern void HTKFeatureConfigurationVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_RemoveAt")]
   public static extern void HTKFeatureConfigurationVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_RemoveRange")]
   public static extern void HTKFeatureConfigurationVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Repeat")]
   public static extern global::System.IntPtr HTKFeatureConfigurationVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Reverse__SWIG_0")]
   public static extern void HTKFeatureConfigurationVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_Reverse__SWIG_1")]
   public static extern void HTKFeatureConfigurationVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfigurationVector_SetRange")]
   public static extern void HTKFeatureConfigurationVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_HTKFeatureConfigurationVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_HTKFeatureConfigurationVector")]
   public static extern void delete_HTKFeatureConfigurationVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapParameterNDArrayViewPtr__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapParameterNDArrayViewPtr__SWIG_0")]
   public static extern global::System.IntPtr new_UnorderedMapParameterNDArrayViewPtr__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapParameterNDArrayViewPtr__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapParameterNDArrayViewPtr__SWIG_1")]
   public static extern global::System.IntPtr new_UnorderedMapParameterNDArrayViewPtr__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_size")]
   public static extern uint UnorderedMapParameterNDArrayViewPtr_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_empty")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_empty")]
   public static extern bool UnorderedMapParameterNDArrayViewPtr_empty(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_Clear")]
   public static extern void UnorderedMapParameterNDArrayViewPtr_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_getitem")]
   public static extern global::System.IntPtr UnorderedMapParameterNDArrayViewPtr_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_setitem")]
   public static extern void UnorderedMapParameterNDArrayViewPtr_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_ContainsKey")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_ContainsKey")]
   public static extern bool UnorderedMapParameterNDArrayViewPtr_ContainsKey(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_Add")]
   public static extern void UnorderedMapParameterNDArrayViewPtr_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_Remove")]
   public static extern bool UnorderedMapParameterNDArrayViewPtr_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_create_iterator_begin")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_create_iterator_begin")]
   public static extern global::System.IntPtr UnorderedMapParameterNDArrayViewPtr_create_iterator_begin(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_get_next_key")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_get_next_key")]
   public static extern global::System.IntPtr UnorderedMapParameterNDArrayViewPtr_get_next_key(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_destroy_iterator")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapParameterNDArrayViewPtr_destroy_iterator")]
   public static extern void UnorderedMapParameterNDArrayViewPtr_destroy_iterator(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapParameterNDArrayViewPtr")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapParameterNDArrayViewPtr")]
   public static extern void delete_UnorderedMapParameterNDArrayViewPtr(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairNDArrayViewPtrNDArrayViewPtr__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairNDArrayViewPtrNDArrayViewPtr__SWIG_0")]
   public static extern global::System.IntPtr new_PairNDArrayViewPtrNDArrayViewPtr__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairNDArrayViewPtrNDArrayViewPtr__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairNDArrayViewPtrNDArrayViewPtr__SWIG_1")]
   public static extern global::System.IntPtr new_PairNDArrayViewPtrNDArrayViewPtr__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairNDArrayViewPtrNDArrayViewPtr__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairNDArrayViewPtrNDArrayViewPtr__SWIG_2")]
   public static extern global::System.IntPtr new_PairNDArrayViewPtrNDArrayViewPtr__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairNDArrayViewPtrNDArrayViewPtr_first_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairNDArrayViewPtrNDArrayViewPtr_first_set")]
   public static extern void PairNDArrayViewPtrNDArrayViewPtr_first_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairNDArrayViewPtrNDArrayViewPtr_first_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairNDArrayViewPtrNDArrayViewPtr_first_get")]
   public static extern global::System.IntPtr PairNDArrayViewPtrNDArrayViewPtr_first_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairNDArrayViewPtrNDArrayViewPtr_second_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairNDArrayViewPtrNDArrayViewPtr_second_set")]
   public static extern void PairNDArrayViewPtrNDArrayViewPtr_second_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairNDArrayViewPtrNDArrayViewPtr_second_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairNDArrayViewPtrNDArrayViewPtr_second_get")]
   public static extern global::System.IntPtr PairNDArrayViewPtrNDArrayViewPtr_second_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_PairNDArrayViewPtrNDArrayViewPtr")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_PairNDArrayViewPtrNDArrayViewPtr")]
   public static extern void delete_PairNDArrayViewPtrNDArrayViewPtr(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr__SWIG_0")]
   public static extern global::System.IntPtr new_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr__SWIG_1")]
   public static extern global::System.IntPtr new_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_size")]
   public static extern uint UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_empty")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_empty")]
   public static extern bool UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_empty(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_Clear")]
   public static extern void UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_getitem")]
   public static extern global::System.IntPtr UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_setitem")]
   public static extern void UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_ContainsKey")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_ContainsKey")]
   public static extern bool UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_ContainsKey(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_Add")]
   public static extern void UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_Remove")]
   public static extern bool UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_create_iterator_begin")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_create_iterator_begin")]
   public static extern global::System.IntPtr UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_create_iterator_begin(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_get_next_key")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_get_next_key")]
   public static extern global::System.IntPtr UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_get_next_key(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_destroy_iterator")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_destroy_iterator")]
   public static extern void UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr_destroy_iterator(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr")]
   public static extern void delete_UnorderedMapStreamInformationPairNDArrayViewPtrNDArrayViewPtr(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Clear")]
   public static extern void ProgressWriterVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Add")]
   public static extern void ProgressWriterVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_size")]
   public static extern uint ProgressWriterVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_capacity")]
   public static extern uint ProgressWriterVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_reserve")]
   public static extern void ProgressWriterVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_ProgressWriterVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_ProgressWriterVector__SWIG_0")]
   public static extern global::System.IntPtr new_ProgressWriterVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_ProgressWriterVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_ProgressWriterVector__SWIG_1")]
   public static extern global::System.IntPtr new_ProgressWriterVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_ProgressWriterVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_ProgressWriterVector__SWIG_2")]
   public static extern global::System.IntPtr new_ProgressWriterVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_getitemcopy")]
   public static extern global::System.IntPtr ProgressWriterVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_getitem")]
   public static extern global::System.IntPtr ProgressWriterVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_setitem")]
   public static extern void ProgressWriterVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_AddRange")]
   public static extern void ProgressWriterVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_GetRange")]
   public static extern global::System.IntPtr ProgressWriterVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Insert")]
   public static extern void ProgressWriterVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_InsertRange")]
   public static extern void ProgressWriterVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_RemoveAt")]
   public static extern void ProgressWriterVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_RemoveRange")]
   public static extern void ProgressWriterVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Repeat")]
   public static extern global::System.IntPtr ProgressWriterVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Reverse__SWIG_0")]
   public static extern void ProgressWriterVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_Reverse__SWIG_1")]
   public static extern void ProgressWriterVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriterVector_SetRange")]
   public static extern void ProgressWriterVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_ProgressWriterVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_ProgressWriterVector")]
   public static extern void delete_ProgressWriterVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_Clear")]
   public static extern void LearnerVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_Add")]
   public static extern void LearnerVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_size")]
   public static extern uint LearnerVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_capacity")]
   public static extern uint LearnerVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_reserve")]
   public static extern void LearnerVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_LearnerVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_LearnerVector__SWIG_0")]
   public static extern global::System.IntPtr new_LearnerVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_LearnerVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_LearnerVector__SWIG_1")]
   public static extern global::System.IntPtr new_LearnerVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_LearnerVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_LearnerVector__SWIG_2")]
   public static extern global::System.IntPtr new_LearnerVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_getitemcopy")]
   public static extern global::System.IntPtr LearnerVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_getitem")]
   public static extern global::System.IntPtr LearnerVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_setitem")]
   public static extern void LearnerVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_AddRange")]
   public static extern void LearnerVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_GetRange")]
   public static extern global::System.IntPtr LearnerVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_Insert")]
   public static extern void LearnerVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_InsertRange")]
   public static extern void LearnerVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_RemoveAt")]
   public static extern void LearnerVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_RemoveRange")]
   public static extern void LearnerVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_Repeat")]
   public static extern global::System.IntPtr LearnerVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_Reverse__SWIG_0")]
   public static extern void LearnerVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_Reverse__SWIG_1")]
   public static extern void LearnerVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LearnerVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LearnerVector_SetRange")]
   public static extern void LearnerVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_LearnerVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_LearnerVector")]
   public static extern void delete_LearnerVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VariablePair__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VariablePair__SWIG_0")]
   public static extern global::System.IntPtr new_VariablePair__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VariablePair__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VariablePair__SWIG_1")]
   public static extern global::System.IntPtr new_VariablePair__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VariablePair__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VariablePair__SWIG_2")]
   public static extern global::System.IntPtr new_VariablePair__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePair_first_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePair_first_set")]
   public static extern void VariablePair_first_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePair_first_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePair_first_get")]
   public static extern global::System.IntPtr VariablePair_first_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePair_second_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePair_second_set")]
   public static extern void VariablePair_second_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePair_second_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePair_second_get")]
   public static extern global::System.IntPtr VariablePair_second_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_VariablePair")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_VariablePair")]
   public static extern void delete_VariablePair(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Clear")]
   public static extern void VariablePairVector_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Add")]
   public static extern void VariablePairVector_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_size")]
   public static extern uint VariablePairVector_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_capacity")]
   public static extern uint VariablePairVector_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_reserve")]
   public static extern void VariablePairVector_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VariablePairVector__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VariablePairVector__SWIG_0")]
   public static extern global::System.IntPtr new_VariablePairVector__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VariablePairVector__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VariablePairVector__SWIG_1")]
   public static extern global::System.IntPtr new_VariablePairVector__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VariablePairVector__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VariablePairVector__SWIG_2")]
   public static extern global::System.IntPtr new_VariablePairVector__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_getitemcopy")]
   public static extern global::System.IntPtr VariablePairVector_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_getitem")]
   public static extern global::System.IntPtr VariablePairVector_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_setitem")]
   public static extern void VariablePairVector_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_AddRange")]
   public static extern void VariablePairVector_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_GetRange")]
   public static extern global::System.IntPtr VariablePairVector_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Insert")]
   public static extern void VariablePairVector_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_InsertRange")]
   public static extern void VariablePairVector_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_RemoveAt")]
   public static extern void VariablePairVector_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_RemoveRange")]
   public static extern void VariablePairVector_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Repeat")]
   public static extern global::System.IntPtr VariablePairVector_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Reverse__SWIG_0")]
   public static extern void VariablePairVector_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_Reverse__SWIG_1")]
   public static extern void VariablePairVector_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariablePairVector_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariablePairVector_SetRange")]
   public static extern void VariablePairVector_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_VariablePairVector")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_VariablePairVector")]
   public static extern void delete_VariablePairVector(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStringDictionaryValue__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStringDictionaryValue__SWIG_0")]
   public static extern global::System.IntPtr new_UnorderedMapStringDictionaryValue__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStringDictionaryValue__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_UnorderedMapStringDictionaryValue__SWIG_1")]
   public static extern global::System.IntPtr new_UnorderedMapStringDictionaryValue__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_size")]
   public static extern uint UnorderedMapStringDictionaryValue_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_empty")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_empty")]
   public static extern bool UnorderedMapStringDictionaryValue_empty(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_Clear")]
   public static extern void UnorderedMapStringDictionaryValue_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_getitem")]
   public static extern global::System.IntPtr UnorderedMapStringDictionaryValue_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_setitem")]
   public static extern void UnorderedMapStringDictionaryValue_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_ContainsKey")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_ContainsKey")]
   public static extern bool UnorderedMapStringDictionaryValue_ContainsKey(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_Add")]
   public static extern void UnorderedMapStringDictionaryValue_Add(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_Remove")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_Remove")]
   public static extern bool UnorderedMapStringDictionaryValue_Remove(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_create_iterator_begin")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_create_iterator_begin")]
   public static extern global::System.IntPtr UnorderedMapStringDictionaryValue_create_iterator_begin(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_get_next_key")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_get_next_key")]
   public static extern string UnorderedMapStringDictionaryValue_get_next_key(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_destroy_iterator")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnorderedMapStringDictionaryValue_destroy_iterator")]
   public static extern void UnorderedMapStringDictionaryValue_destroy_iterator(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapStringDictionaryValue")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_UnorderedMapStringDictionaryValue")]
   public static extern void delete_UnorderedMapStringDictionaryValue(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairSizeTDouble__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairSizeTDouble__SWIG_0")]
   public static extern global::System.IntPtr new_PairSizeTDouble__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairSizeTDouble__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairSizeTDouble__SWIG_1")]
   public static extern global::System.IntPtr new_PairSizeTDouble__SWIG_1(uint jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairSizeTDouble__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairSizeTDouble__SWIG_2")]
   public static extern global::System.IntPtr new_PairSizeTDouble__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTDouble_first_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTDouble_first_set")]
   public static extern void PairSizeTDouble_first_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTDouble_first_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTDouble_first_get")]
   public static extern uint PairSizeTDouble_first_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTDouble_second_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTDouble_second_set")]
   public static extern void PairSizeTDouble_second_set(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTDouble_second_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTDouble_second_get")]
   public static extern double PairSizeTDouble_second_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_PairSizeTDouble")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_PairSizeTDouble")]
   public static extern void delete_PairSizeTDouble(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Clear")]
   public static extern void VectorPairSizeTDouble_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Add")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Add")]
   public static extern void VectorPairSizeTDouble_Add(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_size")]
   public static extern uint VectorPairSizeTDouble_size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_capacity")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_capacity")]
   public static extern uint VectorPairSizeTDouble_capacity(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_reserve")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_reserve")]
   public static extern void VectorPairSizeTDouble_reserve(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VectorPairSizeTDouble__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VectorPairSizeTDouble__SWIG_0")]
   public static extern global::System.IntPtr new_VectorPairSizeTDouble__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VectorPairSizeTDouble__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VectorPairSizeTDouble__SWIG_1")]
   public static extern global::System.IntPtr new_VectorPairSizeTDouble__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_VectorPairSizeTDouble__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_VectorPairSizeTDouble__SWIG_2")]
   public static extern global::System.IntPtr new_VectorPairSizeTDouble__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_getitemcopy")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_getitemcopy")]
   public static extern global::System.IntPtr VectorPairSizeTDouble_getitemcopy(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_getitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_getitem")]
   public static extern global::System.IntPtr VectorPairSizeTDouble_getitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_setitem")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_setitem")]
   public static extern void VectorPairSizeTDouble_setitem(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_AddRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_AddRange")]
   public static extern void VectorPairSizeTDouble_AddRange(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_GetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_GetRange")]
   public static extern global::System.IntPtr VectorPairSizeTDouble_GetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Insert")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Insert")]
   public static extern void VectorPairSizeTDouble_Insert(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_InsertRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_InsertRange")]
   public static extern void VectorPairSizeTDouble_InsertRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_RemoveAt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_RemoveAt")]
   public static extern void VectorPairSizeTDouble_RemoveAt(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_RemoveRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_RemoveRange")]
   public static extern void VectorPairSizeTDouble_RemoveRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Repeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Repeat")]
   public static extern global::System.IntPtr VectorPairSizeTDouble_Repeat(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Reverse__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Reverse__SWIG_0")]
   public static extern void VectorPairSizeTDouble_Reverse__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Reverse__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_Reverse__SWIG_1")]
   public static extern void VectorPairSizeTDouble_Reverse__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_SetRange")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VectorPairSizeTDouble_SetRange")]
   public static extern void VectorPairSizeTDouble_SetRange(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_VectorPairSizeTDouble")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_VectorPairSizeTDouble")]
   public static extern void delete_VectorPairSizeTDouble(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairSizeTSizeT__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairSizeTSizeT__SWIG_0")]
   public static extern global::System.IntPtr new_PairSizeTSizeT__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairSizeTSizeT__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairSizeTSizeT__SWIG_1")]
   public static extern global::System.IntPtr new_PairSizeTSizeT__SWIG_1(uint jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairSizeTSizeT__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairSizeTSizeT__SWIG_2")]
   public static extern global::System.IntPtr new_PairSizeTSizeT__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTSizeT_first_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTSizeT_first_set")]
   public static extern void PairSizeTSizeT_first_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTSizeT_first_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTSizeT_first_get")]
   public static extern uint PairSizeTSizeT_first_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTSizeT_second_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTSizeT_second_set")]
   public static extern void PairSizeTSizeT_second_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTSizeT_second_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTSizeT_second_get")]
   public static extern uint PairSizeTSizeT_second_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_PairSizeTSizeT")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_PairSizeTSizeT")]
   public static extern void delete_PairSizeTSizeT(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairSizeTInt__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairSizeTInt__SWIG_0")]
   public static extern global::System.IntPtr new_PairSizeTInt__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairSizeTInt__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairSizeTInt__SWIG_1")]
   public static extern global::System.IntPtr new_PairSizeTInt__SWIG_1(uint jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairSizeTInt__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairSizeTInt__SWIG_2")]
   public static extern global::System.IntPtr new_PairSizeTInt__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTInt_first_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTInt_first_set")]
   public static extern void PairSizeTInt_first_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTInt_first_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTInt_first_get")]
   public static extern uint PairSizeTInt_first_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTInt_second_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTInt_second_set")]
   public static extern void PairSizeTInt_second_set(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairSizeTInt_second_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairSizeTInt_second_get")]
   public static extern int PairSizeTInt_second_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_PairSizeTInt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_PairSizeTInt")]
   public static extern void delete_PairSizeTInt(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairIntInt__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairIntInt__SWIG_0")]
   public static extern global::System.IntPtr new_PairIntInt__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairIntInt__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairIntInt__SWIG_1")]
   public static extern global::System.IntPtr new_PairIntInt__SWIG_1(int jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairIntInt__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairIntInt__SWIG_2")]
   public static extern global::System.IntPtr new_PairIntInt__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairIntInt_first_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairIntInt_first_set")]
   public static extern void PairIntInt_first_set(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairIntInt_first_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairIntInt_first_get")]
   public static extern int PairIntInt_first_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairIntInt_second_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairIntInt_second_set")]
   public static extern void PairIntInt_second_set(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairIntInt_second_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairIntInt_second_get")]
   public static extern int PairIntInt_second_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_PairIntInt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_PairIntInt")]
   public static extern void delete_PairIntInt(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairFloatFloat__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairFloatFloat__SWIG_0")]
   public static extern global::System.IntPtr new_PairFloatFloat__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairFloatFloat__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairFloatFloat__SWIG_1")]
   public static extern global::System.IntPtr new_PairFloatFloat__SWIG_1(float jarg1, float jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairFloatFloat__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairFloatFloat__SWIG_2")]
   public static extern global::System.IntPtr new_PairFloatFloat__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairFloatFloat_first_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairFloatFloat_first_set")]
   public static extern void PairFloatFloat_first_set(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairFloatFloat_first_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairFloatFloat_first_get")]
   public static extern float PairFloatFloat_first_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairFloatFloat_second_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairFloatFloat_second_set")]
   public static extern void PairFloatFloat_second_set(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairFloatFloat_second_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairFloatFloat_second_get")]
   public static extern float PairFloatFloat_second_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_PairFloatFloat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_PairFloatFloat")]
   public static extern void delete_PairFloatFloat(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairDoubleDouble__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairDoubleDouble__SWIG_0")]
   public static extern global::System.IntPtr new_PairDoubleDouble__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairDoubleDouble__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairDoubleDouble__SWIG_1")]
   public static extern global::System.IntPtr new_PairDoubleDouble__SWIG_1(double jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_PairDoubleDouble__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_PairDoubleDouble__SWIG_2")]
   public static extern global::System.IntPtr new_PairDoubleDouble__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairDoubleDouble_first_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairDoubleDouble_first_set")]
   public static extern void PairDoubleDouble_first_set(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairDoubleDouble_first_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairDoubleDouble_first_get")]
   public static extern double PairDoubleDouble_first_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairDoubleDouble_second_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairDoubleDouble_second_set")]
   public static extern void PairDoubleDouble_second_set(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PairDoubleDouble_second_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PairDoubleDouble_second_get")]
   public static extern double PairDoubleDouble_second_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_PairDoubleDouble")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_PairDoubleDouble")]
   public static extern void delete_PairDoubleDouble(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionSequenceShape__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionSequenceShape__SWIG_0")]
   public static extern global::System.IntPtr ConvolutionSequenceShape__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8, uint jarg9, uint jarg10, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg11);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionSequenceShape__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionSequenceShape__SWIG_1")]
   public static extern global::System.IntPtr ConvolutionSequenceShape__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8, uint jarg9, uint jarg10);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SpatialConvolution__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SpatialConvolution__SWIG_0")]
   public static extern global::System.IntPtr SpatialConvolution__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, uint jarg7, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SpatialConvolution__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SpatialConvolution__SWIG_1")]
   public static extern global::System.IntPtr SpatialConvolution__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, uint jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SpatialConvolutionSequenceShape__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SpatialConvolutionSequenceShape__SWIG_0")]
   public static extern global::System.IntPtr SpatialConvolutionSequenceShape__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, uint jarg7, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SpatialConvolutionSequenceShape__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SpatialConvolutionSequenceShape__SWIG_1")]
   public static extern global::System.IntPtr SpatialConvolutionSequenceShape__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, uint jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MatMul__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MatMul__SWIG_0")]
   public static extern global::System.IntPtr MatMul__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MatMul__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MatMul__SWIG_1")]
   public static extern global::System.IntPtr MatMul__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_0")]
   public static extern global::System.IntPtr Gemm__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, float jarg4, float jarg5, bool jarg6, bool jarg7, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_1")]
   public static extern global::System.IntPtr Gemm__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, float jarg4, float jarg5, bool jarg6, bool jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_2")]
   public static extern global::System.IntPtr Gemm__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, float jarg4, float jarg5, bool jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_3")]
   public static extern global::System.IntPtr Gemm__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, float jarg4, float jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_4")]
   public static extern global::System.IntPtr Gemm__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, float jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Gemm__SWIG_5")]
   public static extern global::System.IntPtr Gemm__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Unsqueeze__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Unsqueeze__SWIG_0")]
   public static extern global::System.IntPtr Unsqueeze__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Unsqueeze__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Unsqueeze__SWIG_1")]
   public static extern global::System.IntPtr Unsqueeze__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GenerateRandomSeed__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GenerateRandomSeed__SWIG_0")]
   public static extern uint GenerateRandomSeed__SWIG_0(bool jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GenerateRandomSeed__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GenerateRandomSeed__SWIG_1")]
   public static extern uint GenerateRandomSeed__SWIG_1();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SetMathLibTraceLevel")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SetMathLibTraceLevel")]
   public static extern void SetMathLibTraceLevel(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ForceDeterministicAlgorithms")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ForceDeterministicAlgorithms")]
   public static extern void ForceDeterministicAlgorithms();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ShouldForceDeterministicAlgorithms")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ShouldForceDeterministicAlgorithms")]
   public static extern bool ShouldForceDeterministicAlgorithms();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UseSparseGradientAggregationInDataParallelSGD")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UseSparseGradientAggregationInDataParallelSGD")]
   public static extern void UseSparseGradientAggregationInDataParallelSGD(bool jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ShouldUseSparseGradientAggregationInDataParallelSGD")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ShouldUseSparseGradientAggregationInDataParallelSGD")]
   public static extern bool ShouldUseSparseGradientAggregationInDataParallelSGD();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GetRandomSeed")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GetRandomSeed")]
   public static extern uint GetRandomSeed();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SetFixedRandomSeed")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SetFixedRandomSeed")]
   public static extern void SetFixedRandomSeed(uint jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IsRandomSeedFixed")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IsRandomSeedFixed")]
   public static extern bool IsRandomSeedFixed();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ResetRandomSeed__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ResetRandomSeed__SWIG_0")]
   public static extern void ResetRandomSeed__SWIG_0(uint jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ResetRandomSeed__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ResetRandomSeed__SWIG_1")]
   public static extern void ResetRandomSeed__SWIG_1();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DisableNodeTimeing")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DisableNodeTimeing")]
   public static extern void DisableNodeTimeing();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_EnableCPUEvalOptimization")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_EnableCPUEvalOptimization")]
   public static extern void EnableCPUEvalOptimization();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DisableCPUEvalOptimization")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DisableCPUEvalOptimization")]
   public static extern void DisableCPUEvalOptimization();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_float16__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_float16__SWIG_0")]
   public static extern global::System.IntPtr new_float16__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_float16__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_float16__SWIG_1")]
   public static extern global::System.IntPtr new_float16__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_float16_create__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_float16_create__SWIG_0")]
   public static extern global::System.IntPtr float16_create__SWIG_0(float jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_float16_create__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_float16_create__SWIG_1")]
   public static extern global::System.IntPtr float16_create__SWIG_1(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_float16")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_float16")]
   public static extern void delete_float16(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DataTypeName")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DataTypeName")]
   public static extern string DataTypeName(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DataTypeSize")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DataTypeSize")]
   public static extern uint DataTypeSize(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_IsSparseStorageFormat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_IsSparseStorageFormat")]
   public static extern bool IsSparseStorageFormat(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceKindName")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceKindName")]
   public static extern global::System.IntPtr DeviceKindName(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AreEqual__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AreEqual__SWIG_0")]
   public static extern bool AreEqual__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape_Unknown")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape_Unknown")]
   public static extern global::System.IntPtr NDShape_Unknown();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDShape__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDShape__SWIG_0")]
   public static extern global::System.IntPtr new_NDShape__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDShape__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDShape__SWIG_1")]
   public static extern global::System.IntPtr new_NDShape__SWIG_1(uint jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDShape__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDShape__SWIG_2")]
   public static extern global::System.IntPtr new_NDShape__SWIG_2(uint jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDShape__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDShape__SWIG_3")]
   public static extern global::System.IntPtr new_NDShape__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__Dimensions")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__Dimensions")]
   public static extern global::System.IntPtr NDShape__Dimensions(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__IsUnknown")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__IsUnknown")]
   public static extern bool NDShape__IsUnknown(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape_IsScalar")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape_IsScalar")]
   public static extern bool NDShape_IsScalar(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__Rank")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__Rank")]
   public static extern uint NDShape__Rank(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__SubShape__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__SubShape__SWIG_0")]
   public static extern global::System.IntPtr NDShape__SubShape__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__SubShape__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__SubShape__SWIG_1")]
   public static extern global::System.IntPtr NDShape__SubShape__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__SubShape__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__SubShape__SWIG_2")]
   public static extern global::System.IntPtr NDShape__SubShape__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__HasInferredDimension")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__HasInferredDimension")]
   public static extern bool NDShape__HasInferredDimension(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__HasFreeDimension")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__HasFreeDimension")]
   public static extern bool NDShape__HasFreeDimension(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__HasUnboundDimension")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__HasUnboundDimension")]
   public static extern bool NDShape__HasUnboundDimension(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__TotalSize")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__TotalSize")]
   public static extern uint NDShape__TotalSize(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape_AppendShape")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape_AppendShape")]
   public static extern global::System.IntPtr NDShape_AppendShape(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape_AsString")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape_AsString")]
   public static extern string NDShape_AsString(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape__DimensionSize")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape__DimensionSize")]
   public static extern uint NDShape__DimensionSize(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDShape_CSharp_SizeTVector_AddExt")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDShape_CSharp_SizeTVector_AddExt")]
   public static extern void NDShape_CSharp_SizeTVector_AddExt(global::System.Runtime.InteropServices.HandleRef jarg1, ulong jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_NDShape")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_NDShape")]
   public static extern void delete_NDShape(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AreNotEqual__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AreNotEqual__SWIG_0")]
   public static extern bool AreNotEqual__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StreamInformation")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StreamInformation")]
   public static extern global::System.IntPtr new_StreamInformation();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_name_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_name_set")]
   public static extern void StreamInformation_m_name_set(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_name_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_name_get")]
   public static extern string StreamInformation_m_name_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_id_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_id_set")]
   public static extern void StreamInformation_m_id_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_id_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_id_get")]
   public static extern uint StreamInformation_m_id_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_storageFormat_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_storageFormat_set")]
   public static extern void StreamInformation_m_storageFormat_set(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_storageFormat_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_storageFormat_get")]
   public static extern int StreamInformation_m_storageFormat_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_elementType_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_elementType_set")]
   public static extern void StreamInformation_m_elementType_set(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_elementType_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_elementType_get")]
   public static extern int StreamInformation_m_elementType_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_sampleLayout_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_sampleLayout_set")]
   public static extern void StreamInformation_m_sampleLayout_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_sampleLayout_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_sampleLayout_get")]
   public static extern global::System.IntPtr StreamInformation_m_sampleLayout_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_definesMbSize_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_definesMbSize_set")]
   public static extern void StreamInformation_m_definesMbSize_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_definesMbSize_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_definesMbSize_get")]
   public static extern bool StreamInformation_m_definesMbSize_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_isBinary_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_isBinary_set")]
   public static extern void StreamInformation_m_isBinary_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_isBinary_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_m_isBinary_get")]
   public static extern bool StreamInformation_m_isBinary_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamInformation_AsString")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamInformation_AsString")]
   public static extern string StreamInformation_AsString(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_StreamInformation")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_StreamInformation")]
   public static extern void delete_StreamInformation(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SetTraceLevel")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SetTraceLevel")]
   public static extern void SetTraceLevel(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GetTraceLevel")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GetTraceLevel")]
   public static extern int GetTraceLevel();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_atEndOfData_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_atEndOfData_set")]
   public static extern void MinibatchInfo_atEndOfData_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_atEndOfData_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_atEndOfData_get")]
   public static extern bool MinibatchInfo_atEndOfData_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_atEndOfSweep_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_atEndOfSweep_set")]
   public static extern void MinibatchInfo_atEndOfSweep_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_atEndOfSweep_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_atEndOfSweep_get")]
   public static extern bool MinibatchInfo_atEndOfSweep_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_numberOfSamples_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_numberOfSamples_set")]
   public static extern void MinibatchInfo_numberOfSamples_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_numberOfSamples_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_numberOfSamples_get")]
   public static extern uint MinibatchInfo_numberOfSamples_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_trainingLossValue_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_trainingLossValue_set")]
   public static extern void MinibatchInfo_trainingLossValue_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_trainingLossValue_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_trainingLossValue_get")]
   public static extern global::System.IntPtr MinibatchInfo_trainingLossValue_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_evalCriterionValue_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_evalCriterionValue_set")]
   public static extern void MinibatchInfo_evalCriterionValue_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_evalCriterionValue_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_evalCriterionValue_get")]
   public static extern global::System.IntPtr MinibatchInfo_evalCriterionValue_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_IsEmpty")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchInfo_IsEmpty")]
   public static extern bool MinibatchInfo_IsEmpty(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_MinibatchInfo")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_MinibatchInfo")]
   public static extern global::System.IntPtr new_MinibatchInfo();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_MinibatchInfo")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_MinibatchInfo")]
   public static extern void delete_MinibatchInfo(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AreEqual__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AreEqual__SWIG_1")]
   public static extern bool AreEqual__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__Id")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__Id")]
   public static extern uint DeviceDescriptor__Id(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__Type")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__Type")]
   public static extern int DeviceDescriptor__Type(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor_IsLocked")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor_IsLocked")]
   public static extern bool DeviceDescriptor_IsLocked(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__CPUDevice")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__CPUDevice")]
   public static extern global::System.IntPtr DeviceDescriptor__CPUDevice();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__GPUDevice")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__GPUDevice")]
   public static extern global::System.IntPtr DeviceDescriptor__GPUDevice(uint jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor_UseDefaultDevice")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor_UseDefaultDevice")]
   public static extern global::System.IntPtr DeviceDescriptor_UseDefaultDevice();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor_TrySetDefaultDevice__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor_TrySetDefaultDevice__SWIG_0")]
   public static extern bool DeviceDescriptor_TrySetDefaultDevice__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor_TrySetDefaultDevice__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor_TrySetDefaultDevice__SWIG_1")]
   public static extern bool DeviceDescriptor_TrySetDefaultDevice__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__SetExcludedDevices")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__SetExcludedDevices")]
   public static extern void DeviceDescriptor__SetExcludedDevices(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__AllDevices")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor__AllDevices")]
   public static extern global::System.IntPtr DeviceDescriptor__AllDevices();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor_AsString")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DeviceDescriptor_AsString")]
   public static extern string DeviceDescriptor_AsString(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_DeviceDescriptor")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_DeviceDescriptor")]
   public static extern void delete_DeviceDescriptor(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AreNotEqual__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AreNotEqual__SWIG_1")]
   public static extern bool AreNotEqual__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_0")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_0(int jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, uint jarg6, global::System.Runtime.InteropServices.HandleRef jarg7, bool jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_1")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_1(int jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, uint jarg6, global::System.Runtime.InteropServices.HandleRef jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_2")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_2(int jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_3")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_3(int jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_NDArrayView")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_NDArrayView")]
   public static extern void delete_NDArrayView(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__Device")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__Device")]
   public static extern global::System.IntPtr NDArrayView__Device(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__GetDataType")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__GetDataType")]
   public static extern int NDArrayView__GetDataType(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__GetStorageFormat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__GetStorageFormat")]
   public static extern int NDArrayView__GetStorageFormat(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__Shape")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__Shape")]
   public static extern global::System.IntPtr NDArrayView__Shape(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__IsSparse")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__IsSparse")]
   public static extern bool NDArrayView__IsSparse(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__IsReadOnly")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__IsReadOnly")]
   public static extern bool NDArrayView__IsReadOnly(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__IsSliceView")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__IsSliceView")]
   public static extern bool NDArrayView__IsSliceView(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_SetValue__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_SetValue__SWIG_0")]
   public static extern void NDArrayView_SetValue__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_SetValue__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_SetValue__SWIG_1")]
   public static extern void NDArrayView_SetValue__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_SetValue__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_SetValue__SWIG_2")]
   public static extern void NDArrayView_SetValue__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_SetValue__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_SetValue__SWIG_3")]
   public static extern void NDArrayView_SetValue__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_SetValue__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_SetValue__SWIG_4")]
   public static extern void NDArrayView_SetValue__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_DeepClone__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_DeepClone__SWIG_0")]
   public static extern global::System.IntPtr NDArrayView_DeepClone__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_DeepClone__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_DeepClone__SWIG_1")]
   public static extern global::System.IntPtr NDArrayView_DeepClone__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_DeepClone__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_DeepClone__SWIG_2")]
   public static extern global::System.IntPtr NDArrayView_DeepClone__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_DeepClone__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_DeepClone__SWIG_3")]
   public static extern global::System.IntPtr NDArrayView_DeepClone__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__Alias__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__Alias__SWIG_0")]
   public static extern global::System.IntPtr NDArrayView__Alias__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__Alias__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__Alias__SWIG_1")]
   public static extern global::System.IntPtr NDArrayView__Alias__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__SliceView__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__SliceView__SWIG_0")]
   public static extern global::System.IntPtr NDArrayView__SliceView__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__SliceView__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__SliceView__SWIG_1")]
   public static extern global::System.IntPtr NDArrayView__SliceView__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_AsShape")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_AsShape")]
   public static extern global::System.IntPtr NDArrayView_AsShape(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_CopyFrom")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_CopyFrom")]
   public static extern void NDArrayView_CopyFrom(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_ChangeDevice")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_ChangeDevice")]
   public static extern void NDArrayView_ChangeDevice(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView_AsString")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView_AsString")]
   public static extern string NDArrayView_AsString(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_14")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_14")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_14(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg2, uint jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_15")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_15")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_15(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg2, uint jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_16")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_16")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_16(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg2, uint jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_17")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_17")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_17(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg2, uint jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_18")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_18")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_18(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg4, uint jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_19")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_19")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_19(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg4, uint jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_20")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_20")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_20(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg4, uint jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_21")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_21")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_21(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg4, uint jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_22")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_22")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_22(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, uint jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_23")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_23")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_23(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, uint jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_24")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_24")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_24(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, uint jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_25")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDArrayView__SWIG_25")]
   public static extern global::System.IntPtr new_NDArrayView__SWIG_25(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, uint jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__RandomNormalFloat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__RandomNormalFloat")]
   public static extern global::System.IntPtr NDArrayView__RandomNormalFloat(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, uint jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__RandomNormalDouble")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__RandomNormalDouble")]
   public static extern global::System.IntPtr NDArrayView__RandomNormalDouble(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, uint jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__RandomUniformFloat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__RandomUniformFloat")]
   public static extern global::System.IntPtr NDArrayView__RandomUniformFloat(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, uint jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDArrayView__RandomUniformDouble")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDArrayView__RandomUniformDouble")]
   public static extern global::System.IntPtr NDArrayView__RandomUniformDouble(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, uint jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDMask__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDMask__SWIG_0")]
   public static extern global::System.IntPtr new_NDMask__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_NDMask__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_NDMask__SWIG_1")]
   public static extern global::System.IntPtr new_NDMask__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_NDMask")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_NDMask")]
   public static extern void delete_NDMask(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask__InvalidateSection")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask__InvalidateSection")]
   public static extern void NDMask__InvalidateSection(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask__MarkSequenceBegin__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask__MarkSequenceBegin__SWIG_0")]
   public static extern void NDMask__MarkSequenceBegin__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask__MarkSequenceBegin__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask__MarkSequenceBegin__SWIG_1")]
   public static extern void NDMask__MarkSequenceBegin__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask_Clear")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask_Clear")]
   public static extern void NDMask_Clear(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask__MaskedCount")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask__MaskedCount")]
   public static extern uint NDMask__MaskedCount(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask__Device")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask__Device")]
   public static extern global::System.IntPtr NDMask__Device(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask__Shape")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask__Shape")]
   public static extern global::System.IntPtr NDMask__Shape(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask_DeepClone__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask_DeepClone__SWIG_0")]
   public static extern global::System.IntPtr NDMask_DeepClone__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask_DeepClone__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask_DeepClone__SWIG_1")]
   public static extern global::System.IntPtr NDMask_DeepClone__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask_Alias")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask_Alias")]
   public static extern global::System.IntPtr NDMask_Alias(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDMask_CopyFrom")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDMask_CopyFrom")]
   public static extern void NDMask_CopyFrom(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AreEqual__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AreEqual__SWIG_2")]
   public static extern bool AreEqual__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_DefaultInputVariableDynamicAxes")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_DefaultInputVariableDynamicAxes")]
   public static extern global::System.IntPtr Axis_DefaultInputVariableDynamicAxes();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_UnknownDynamicAxes")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_UnknownDynamicAxes")]
   public static extern global::System.IntPtr Axis_UnknownDynamicAxes();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Axis__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Axis__SWIG_0")]
   public static extern global::System.IntPtr new_Axis__SWIG_0(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Axis__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Axis__SWIG_1")]
   public static extern global::System.IntPtr new_Axis__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Axis__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Axis__SWIG_2")]
   public static extern global::System.IntPtr new_Axis__SWIG_2([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis__IsStaticAxis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis__IsStaticAxis")]
   public static extern bool Axis__IsStaticAxis(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis__IsDynamicAxis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis__IsDynamicAxis")]
   public static extern bool Axis__IsDynamicAxis(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_IsBatchAxis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_IsBatchAxis")]
   public static extern bool Axis_IsBatchAxis(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_IsSequenceAxis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_IsSequenceAxis")]
   public static extern bool Axis_IsSequenceAxis(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis__IsOrdered")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis__IsOrdered")]
   public static extern bool Axis__IsOrdered(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis__StaticAxisIndex__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis__StaticAxisIndex__SWIG_0")]
   public static extern int Axis__StaticAxisIndex__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis__StaticAxisIndex__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis__StaticAxisIndex__SWIG_1")]
   public static extern int Axis__StaticAxisIndex__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_DefaultDynamicAxis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_DefaultDynamicAxis")]
   public static extern global::System.IntPtr Axis_DefaultDynamicAxis();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_OperandSequenceAxis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_OperandSequenceAxis")]
   public static extern global::System.IntPtr Axis_OperandSequenceAxis();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_DefaultBatchAxis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_DefaultBatchAxis")]
   public static extern global::System.IntPtr Axis_DefaultBatchAxis();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_AllStaticAxes")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_AllStaticAxes")]
   public static extern global::System.IntPtr Axis_AllStaticAxes();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_AllAxes")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_AllAxes")]
   public static extern global::System.IntPtr Axis_AllAxes();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_NewUniqueDynamicAxis__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_NewUniqueDynamicAxis__SWIG_0")]
   public static extern global::System.IntPtr Axis_NewUniqueDynamicAxis__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_NewUniqueDynamicAxis__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_NewUniqueDynamicAxis__SWIG_1")]
   public static extern global::System.IntPtr Axis_NewUniqueDynamicAxis__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_EndStaticAxis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_EndStaticAxis")]
   public static extern global::System.IntPtr Axis_EndStaticAxis();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis__Name")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis__Name")]
   public static extern string Axis__Name(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Axis_AsString")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Axis_AsString")]
   public static extern string Axis_AsString(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Axis__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Axis__SWIG_3")]
   public static extern global::System.IntPtr new_Axis__SWIG_3();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_Axis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_Axis")]
   public static extern void delete_Axis(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AreNotEqual__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AreNotEqual__SWIG_2")]
   public static extern bool AreNotEqual__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryValue_TypeName")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryValue_TypeName")]
   public static extern string DictionaryValue_TypeName(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_0")]
   public static extern global::System.IntPtr new_DictionaryValue__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_1")]
   public static extern global::System.IntPtr new_DictionaryValue__SWIG_1(bool jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_2")]
   public static extern global::System.IntPtr new_DictionaryValue__SWIG_2(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_3")]
   public static extern global::System.IntPtr new_DictionaryValue__SWIG_3(uint jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_4")]
   public static extern global::System.IntPtr new_DictionaryValue__SWIG_4(float jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_5")]
   public static extern global::System.IntPtr new_DictionaryValue__SWIG_5(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_6")]
   public static extern global::System.IntPtr new_DictionaryValue__SWIG_6([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_8")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_DictionaryValue__SWIG_8")]
   public static extern global::System.IntPtr new_DictionaryValue__SWIG_8(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_DictionaryValue")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_DictionaryValue")]
   public static extern void delete_DictionaryValue(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryValue_HasValue")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryValue_HasValue")]
   public static extern bool DictionaryValue_HasValue(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryValue_ValueType")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryValue_ValueType")]
   public static extern int DictionaryValue_ValueType(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryValue_AreEqual")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryValue_AreEqual")]
   public static extern bool DictionaryValue_AreEqual(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryValue_AreNotEqual")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryValue_AreNotEqual")]
   public static extern bool DictionaryValue_AreNotEqual(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryValue_Save")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryValue_Save")]
   public static extern void DictionaryValue_Save(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DictionaryValue_Load")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DictionaryValue_Load")]
   public static extern global::System.IntPtr DictionaryValue_Load([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_CNTKDictionary__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_CNTKDictionary__SWIG_0")]
   public static extern global::System.IntPtr new_CNTKDictionary__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_CNTKDictionary")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_CNTKDictionary")]
   public static extern void delete_CNTKDictionary(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_CNTKDictionary__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_CNTKDictionary__SWIG_1")]
   public static extern global::System.IntPtr new_CNTKDictionary__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Equal")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Equal")]
   public static extern global::System.IntPtr CNTKDictionary_Equal(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Contains")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Contains")]
   public static extern bool CNTKDictionary_Contains(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Add__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Add__SWIG_0")]
   public static extern void CNTKDictionary_Add__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Add__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Add__SWIG_1")]
   public static extern void CNTKDictionary_Add__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_AreEqual")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_AreEqual")]
   public static extern bool CNTKDictionary_AreEqual(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_AreNotEqual")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_AreNotEqual")]
   public static extern bool CNTKDictionary_AreNotEqual(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Size")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Size")]
   public static extern uint CNTKDictionary_Size(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Save")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Save")]
   public static extern void CNTKDictionary_Save(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Load")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CNTKDictionary_Load")]
   public static extern global::System.IntPtr CNTKDictionary_Load([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_VariableKindName")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_VariableKindName")]
   public static extern global::System.IntPtr VariableKindName(int jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_0")]
   public static extern global::System.IntPtr PlaceholderVariable__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_1")]
   public static extern global::System.IntPtr PlaceholderVariable__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_0")]
   public static extern global::System.IntPtr InputVariable__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2, int jarg3, bool jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_1")]
   public static extern global::System.IntPtr InputVariable__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2, int jarg3, bool jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OutputVariable__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OutputVariable__SWIG_0")]
   public static extern global::System.IntPtr OutputVariable__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OutputVariable__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OutputVariable__SWIG_1")]
   public static extern global::System.IntPtr OutputVariable__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AreEqual__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AreEqual__SWIG_3")]
   public static extern bool AreEqual__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Variable__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Variable__SWIG_0")]
   public static extern global::System.IntPtr new_Variable__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable_ToFunction")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable_ToFunction")]
   public static extern global::System.IntPtr Variable_ToFunction(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Variable__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Variable__SWIG_1")]
   public static extern global::System.IntPtr new_Variable__SWIG_1();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__Shape")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__Shape")]
   public static extern global::System.IntPtr Variable__Shape(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__DynamicAxes")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__DynamicAxes")]
   public static extern global::System.IntPtr Variable__DynamicAxes(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__Kind")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__Kind")]
   public static extern int Variable__Kind(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__IsSparse")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__IsSparse")]
   public static extern bool Variable__IsSparse(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__IsInput")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__IsInput")]
   public static extern bool Variable__IsInput(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__IsOutput")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__IsOutput")]
   public static extern bool Variable__IsOutput(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__IsParameter")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__IsParameter")]
   public static extern bool Variable__IsParameter(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__IsConstant")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__IsConstant")]
   public static extern bool Variable__IsConstant(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__IsPlaceholder")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__IsPlaceholder")]
   public static extern bool Variable__IsPlaceholder(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable_HasBatchAxis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable_HasBatchAxis")]
   public static extern bool Variable_HasBatchAxis(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable_HasSequenceAxis")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable_HasSequenceAxis")]
   public static extern bool Variable_HasSequenceAxis(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable_IsInitialized")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable_IsInitialized")]
   public static extern bool Variable_IsInitialized(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__Name")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__Name")]
   public static extern string Variable__Name(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__Uid")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__Uid")]
   public static extern string Variable__Uid(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__Owner")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__Owner")]
   public static extern global::System.IntPtr Variable__Owner(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__GetDataType")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__GetDataType")]
   public static extern int Variable__GetDataType(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__NeedsGradient")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__NeedsGradient")]
   public static extern bool Variable__NeedsGradient(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable_AsString")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable_AsString")]
   public static extern string Variable_AsString(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__CurrentValueTimeStamp")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__CurrentValueTimeStamp")]
   public static extern uint Variable__CurrentValueTimeStamp(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable_GetValue")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable_GetValue")]
   public static extern global::System.IntPtr Variable_GetValue(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Variable__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Variable__SWIG_3")]
   public static extern global::System.IntPtr new_Variable__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg8, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Variable__GetHashValue")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Variable__GetHashValue")]
   public static extern uint Variable__GetHashValue(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_Variable")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_Variable")]
   public static extern void delete_Variable(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AreNotEqual__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AreNotEqual__SWIG_3")]
   public static extern bool AreNotEqual__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_2")]
   public static extern global::System.IntPtr PlaceholderVariable__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_3")]
   public static extern global::System.IntPtr PlaceholderVariable__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_4")]
   public static extern global::System.IntPtr PlaceholderVariable__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_5")]
   public static extern global::System.IntPtr PlaceholderVariable__SWIG_5([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PlaceholderVariable__SWIG_6")]
   public static extern global::System.IntPtr PlaceholderVariable__SWIG_6();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_2")]
   public static extern global::System.IntPtr InputVariable__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_3")]
   public static extern global::System.IntPtr InputVariable__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_4")]
   public static extern global::System.IntPtr InputVariable__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_5")]
   public static extern global::System.IntPtr InputVariable__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_6")]
   public static extern global::System.IntPtr InputVariable__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_7")]
   public static extern global::System.IntPtr InputVariable__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_8")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_8")]
   public static extern global::System.IntPtr InputVariable__SWIG_8(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_9")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_9")]
   public static extern global::System.IntPtr InputVariable__SWIG_9(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2, int jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_10")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_10")]
   public static extern global::System.IntPtr InputVariable__SWIG_10(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2, int jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_11")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_11")]
   public static extern global::System.IntPtr InputVariable__SWIG_11(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2, int jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_12")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_InputVariable__SWIG_12")]
   public static extern global::System.IntPtr InputVariable__SWIG_12(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OutputVariable__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OutputVariable__SWIG_2")]
   public static extern global::System.IntPtr OutputVariable__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OutputVariable__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OutputVariable__SWIG_3")]
   public static extern global::System.IntPtr OutputVariable__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SentinelValueForInferParamInitRank_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SentinelValueForInferParamInitRank_get")]
   public static extern int SentinelValueForInferParamInitRank_get();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DefaultParamInitScale_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DefaultParamInitScale_get")]
   public static extern int DefaultParamInitScale_get();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantInitializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantInitializer__SWIG_0")]
   public static extern global::System.IntPtr ConstantInitializer__SWIG_0(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantInitializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantInitializer__SWIG_1")]
   public static extern global::System.IntPtr ConstantInitializer__SWIG_1();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformInitializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformInitializer__SWIG_0")]
   public static extern global::System.IntPtr UniformInitializer__SWIG_0(double jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformInitializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformInitializer__SWIG_1")]
   public static extern global::System.IntPtr UniformInitializer__SWIG_1(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalInitializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalInitializer__SWIG_0")]
   public static extern global::System.IntPtr NormalInitializer__SWIG_0(double jarg1, int jarg2, int jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalInitializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalInitializer__SWIG_1")]
   public static extern global::System.IntPtr NormalInitializer__SWIG_1(double jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalInitializer__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalInitializer__SWIG_2")]
   public static extern global::System.IntPtr NormalInitializer__SWIG_2(double jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalInitializer__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalInitializer__SWIG_3")]
   public static extern global::System.IntPtr NormalInitializer__SWIG_3(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_XavierInitializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_XavierInitializer__SWIG_0")]
   public static extern global::System.IntPtr XavierInitializer__SWIG_0(double jarg1, int jarg2, int jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_XavierInitializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_XavierInitializer__SWIG_1")]
   public static extern global::System.IntPtr XavierInitializer__SWIG_1(double jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_XavierInitializer__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_XavierInitializer__SWIG_2")]
   public static extern global::System.IntPtr XavierInitializer__SWIG_2(double jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_XavierInitializer__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_XavierInitializer__SWIG_3")]
   public static extern global::System.IntPtr XavierInitializer__SWIG_3(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_XavierInitializer__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_XavierInitializer__SWIG_4")]
   public static extern global::System.IntPtr XavierInitializer__SWIG_4();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GlorotUniformInitializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GlorotUniformInitializer__SWIG_0")]
   public static extern global::System.IntPtr GlorotUniformInitializer__SWIG_0(double jarg1, int jarg2, int jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GlorotUniformInitializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GlorotUniformInitializer__SWIG_1")]
   public static extern global::System.IntPtr GlorotUniformInitializer__SWIG_1(double jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GlorotUniformInitializer__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GlorotUniformInitializer__SWIG_2")]
   public static extern global::System.IntPtr GlorotUniformInitializer__SWIG_2(double jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GlorotUniformInitializer__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GlorotUniformInitializer__SWIG_3")]
   public static extern global::System.IntPtr GlorotUniformInitializer__SWIG_3(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GlorotUniformInitializer__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GlorotUniformInitializer__SWIG_4")]
   public static extern global::System.IntPtr GlorotUniformInitializer__SWIG_4();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GlorotNormalInitializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GlorotNormalInitializer__SWIG_0")]
   public static extern global::System.IntPtr GlorotNormalInitializer__SWIG_0(double jarg1, int jarg2, int jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GlorotNormalInitializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GlorotNormalInitializer__SWIG_1")]
   public static extern global::System.IntPtr GlorotNormalInitializer__SWIG_1(double jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GlorotNormalInitializer__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GlorotNormalInitializer__SWIG_2")]
   public static extern global::System.IntPtr GlorotNormalInitializer__SWIG_2(double jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GlorotNormalInitializer__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GlorotNormalInitializer__SWIG_3")]
   public static extern global::System.IntPtr GlorotNormalInitializer__SWIG_3(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GlorotNormalInitializer__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GlorotNormalInitializer__SWIG_4")]
   public static extern global::System.IntPtr GlorotNormalInitializer__SWIG_4();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HeUniformInitializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HeUniformInitializer__SWIG_0")]
   public static extern global::System.IntPtr HeUniformInitializer__SWIG_0(double jarg1, int jarg2, int jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HeUniformInitializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HeUniformInitializer__SWIG_1")]
   public static extern global::System.IntPtr HeUniformInitializer__SWIG_1(double jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HeUniformInitializer__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HeUniformInitializer__SWIG_2")]
   public static extern global::System.IntPtr HeUniformInitializer__SWIG_2(double jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HeUniformInitializer__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HeUniformInitializer__SWIG_3")]
   public static extern global::System.IntPtr HeUniformInitializer__SWIG_3(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HeUniformInitializer__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HeUniformInitializer__SWIG_4")]
   public static extern global::System.IntPtr HeUniformInitializer__SWIG_4();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HeNormalInitializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HeNormalInitializer__SWIG_0")]
   public static extern global::System.IntPtr HeNormalInitializer__SWIG_0(double jarg1, int jarg2, int jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HeNormalInitializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HeNormalInitializer__SWIG_1")]
   public static extern global::System.IntPtr HeNormalInitializer__SWIG_1(double jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HeNormalInitializer__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HeNormalInitializer__SWIG_2")]
   public static extern global::System.IntPtr HeNormalInitializer__SWIG_2(double jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HeNormalInitializer__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HeNormalInitializer__SWIG_3")]
   public static extern global::System.IntPtr HeNormalInitializer__SWIG_3(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HeNormalInitializer__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HeNormalInitializer__SWIG_4")]
   public static extern global::System.IntPtr HeNormalInitializer__SWIG_4();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BilinearInitializer")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BilinearInitializer")]
   public static extern global::System.IntPtr BilinearInitializer(uint jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_RandomInitializerWithRank")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_RandomInitializerWithRank")]
   public static extern global::System.IntPtr RandomInitializerWithRank(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TruncatedNormalInitializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TruncatedNormalInitializer__SWIG_0")]
   public static extern global::System.IntPtr TruncatedNormalInitializer__SWIG_0(double jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TruncatedNormalInitializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TruncatedNormalInitializer__SWIG_1")]
   public static extern global::System.IntPtr TruncatedNormalInitializer__SWIG_1(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TruncatedNormalInitializer__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TruncatedNormalInitializer__SWIG_2")]
   public static extern global::System.IntPtr TruncatedNormalInitializer__SWIG_2();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_0")]
   public static extern global::System.IntPtr new_Parameter__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_1")]
   public static extern global::System.IntPtr new_Parameter__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_5")]
   public static extern global::System.IntPtr new_Parameter__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_6")]
   public static extern global::System.IntPtr new_Parameter__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_7")]
   public static extern global::System.IntPtr new_Parameter__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_8")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_8")]
   public static extern global::System.IntPtr new_Parameter__SWIG_8(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_9")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_9")]
   public static extern global::System.IntPtr new_Parameter__SWIG_9(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_10")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_10")]
   public static extern global::System.IntPtr new_Parameter__SWIG_10(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_11")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Parameter__SWIG_11")]
   public static extern global::System.IntPtr new_Parameter__SWIG_11(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Parameter_Value")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Parameter_Value")]
   public static extern global::System.IntPtr Parameter_Value(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Parameter_SetValue")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Parameter_SetValue")]
   public static extern void Parameter_SetValue(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Parameter_RecordValueUpdate")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Parameter_RecordValueUpdate")]
   public static extern void Parameter_RecordValueUpdate(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_Parameter")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_Parameter")]
   public static extern void delete_Parameter(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_0")]
   public static extern global::System.IntPtr new_Constant__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_1")]
   public static extern global::System.IntPtr new_Constant__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_5")]
   public static extern global::System.IntPtr new_Constant__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_6")]
   public static extern global::System.IntPtr new_Constant__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_7")]
   public static extern global::System.IntPtr new_Constant__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant_CloneAs")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant_CloneAs")]
   public static extern global::System.IntPtr Constant_CloneAs(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant_Scalar__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant_Scalar__SWIG_0")]
   public static extern global::System.IntPtr Constant_Scalar__SWIG_0(int jarg1, double jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant_Scalar__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant_Scalar__SWIG_1")]
   public static extern global::System.IntPtr Constant_Scalar__SWIG_1(int jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_8")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Constant__SWIG_8")]
   public static extern global::System.IntPtr new_Constant__SWIG_8(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant_Value")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant_Value")]
   public static extern global::System.IntPtr Constant_Value(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant_SetValue")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant_SetValue")]
   public static extern void Constant_SetValue(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant_RecordValueUpdate")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant_RecordValueUpdate")]
   public static extern void Constant_RecordValueUpdate(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant__ScalarFloat__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant__ScalarFloat__SWIG_0")]
   public static extern global::System.IntPtr Constant__ScalarFloat__SWIG_0(float jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant__ScalarFloat__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant__ScalarFloat__SWIG_1")]
   public static extern global::System.IntPtr Constant__ScalarFloat__SWIG_1(float jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant__ScalarDouble__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant__ScalarDouble__SWIG_0")]
   public static extern global::System.IntPtr Constant__ScalarDouble__SWIG_0(double jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant__ScalarDouble__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant__ScalarDouble__SWIG_1")]
   public static extern global::System.IntPtr Constant__ScalarDouble__SWIG_1(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_Constant")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_Constant")]
   public static extern void delete_Constant(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value_OneHotSkip_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value_OneHotSkip_get")]
   public static extern uint Value_OneHotSkip_get();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Value__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Value__SWIG_0")]
   public static extern global::System.IntPtr new_Value__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_Value__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_Value__SWIG_1")]
   public static extern global::System.IntPtr new_Value__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Create__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Create__SWIG_4")]
   public static extern global::System.IntPtr Value__Create__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5, bool jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Create__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Create__SWIG_5")]
   public static extern global::System.IntPtr Value__Create__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Create__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Create__SWIG_6")]
   public static extern global::System.IntPtr Value__Create__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Create__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Create__SWIG_7")]
   public static extern global::System.IntPtr Value__Create__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Create__SWIG_8")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Create__SWIG_8")]
   public static extern global::System.IntPtr Value__Create__SWIG_8(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_Value")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_Value")]
   public static extern void delete_Value(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Device")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Device")]
   public static extern global::System.IntPtr Value__Device(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__GetDataType")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__GetDataType")]
   public static extern int Value__GetDataType(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__GetStorageFormat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__GetStorageFormat")]
   public static extern int Value__GetStorageFormat(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Shape")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Shape")]
   public static extern global::System.IntPtr Value__Shape(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__IsSparse")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__IsSparse")]
   public static extern bool Value__IsSparse(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__IsReadOnly")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__IsReadOnly")]
   public static extern bool Value__IsReadOnly(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__MaskedCount")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__MaskedCount")]
   public static extern uint Value__MaskedCount(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Data")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Data")]
   public static extern global::System.IntPtr Value__Data(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Mask")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Mask")]
   public static extern global::System.IntPtr Value__Mask(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value_DeepClone__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value_DeepClone__SWIG_0")]
   public static extern global::System.IntPtr Value_DeepClone__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value_DeepClone__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value_DeepClone__SWIG_1")]
   public static extern global::System.IntPtr Value_DeepClone__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Alias__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Alias__SWIG_0")]
   public static extern global::System.IntPtr Value__Alias__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__Alias__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__Alias__SWIG_1")]
   public static extern global::System.IntPtr Value__Alias__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value_CopyFrom")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value_CopyFrom")]
   public static extern void Value_CopyFrom(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value_Erase")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value_Erase")]
   public static extern void Value_Erase(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CopyVariableValueTo")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CopyVariableValueTo")]
   public static extern void Value__CopyVariableValueTo(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__IsValid")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__IsValid")]
   public static extern bool Value__IsValid(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value_AsString")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value_AsString")]
   public static extern string Value_AsString(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseFloat__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseFloat__SWIG_0")]
   public static extern global::System.IntPtr Value__CreateDenseFloat__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseFloat__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseFloat__SWIG_1")]
   public static extern global::System.IntPtr Value__CreateDenseFloat__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseDouble__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseDouble__SWIG_0")]
   public static extern global::System.IntPtr Value__CreateDenseDouble__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseDouble__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseDouble__SWIG_1")]
   public static extern global::System.IntPtr Value__CreateDenseDouble__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseFloat__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseFloat__SWIG_2")]
   public static extern global::System.IntPtr Value__CreateDenseFloat__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseFloat__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseFloat__SWIG_3")]
   public static extern global::System.IntPtr Value__CreateDenseFloat__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseDouble__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseDouble__SWIG_2")]
   public static extern global::System.IntPtr Value__CreateDenseDouble__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseDouble__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateDenseDouble__SWIG_3")]
   public static extern global::System.IntPtr Value__CreateDenseDouble__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchFloat__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchFloat__SWIG_0")]
   public static extern global::System.IntPtr Value__CreateBatchFloat__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg2, int jarg3, int jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, bool jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchFloat__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchFloat__SWIG_1")]
   public static extern global::System.IntPtr Value__CreateBatchFloat__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg2, int jarg3, int jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchDouble__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchDouble__SWIG_0")]
   public static extern global::System.IntPtr Value__CreateBatchDouble__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg2, int jarg3, int jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, bool jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchDouble__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchDouble__SWIG_1")]
   public static extern global::System.IntPtr Value__CreateBatchDouble__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg2, int jarg3, int jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_0")]
   public static extern global::System.IntPtr Value__CreateSequenceFloat__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg2, int jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, bool jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_1")]
   public static extern global::System.IntPtr Value__CreateSequenceFloat__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg2, int jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_0")]
   public static extern global::System.IntPtr Value__CreateSequenceDouble__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg2, int jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, bool jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_1")]
   public static extern global::System.IntPtr Value__CreateSequenceDouble__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg2, int jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_0")]
   public static extern global::System.IntPtr Value__CreateOneHotFloat__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_1")]
   public static extern global::System.IntPtr Value__CreateOneHotFloat__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_0")]
   public static extern global::System.IntPtr Value__CreateOneHotDouble__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_1")]
   public static extern global::System.IntPtr Value__CreateOneHotDouble__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_2")]
   public static extern global::System.IntPtr Value__CreateOneHotFloat__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_3")]
   public static extern global::System.IntPtr Value__CreateOneHotFloat__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_2")]
   public static extern global::System.IntPtr Value__CreateOneHotDouble__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_3")]
   public static extern global::System.IntPtr Value__CreateOneHotDouble__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_4")]
   public static extern global::System.IntPtr Value__CreateOneHotFloat__SWIG_4(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_5")]
   public static extern global::System.IntPtr Value__CreateOneHotFloat__SWIG_5(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_4")]
   public static extern global::System.IntPtr Value__CreateOneHotDouble__SWIG_4(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_5")]
   public static extern global::System.IntPtr Value__CreateOneHotDouble__SWIG_5(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_6")]
   public static extern global::System.IntPtr Value__CreateOneHotFloat__SWIG_6(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotFloat__SWIG_7")]
   public static extern global::System.IntPtr Value__CreateOneHotFloat__SWIG_7(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_6")]
   public static extern global::System.IntPtr Value__CreateOneHotDouble__SWIG_6(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateOneHotDouble__SWIG_7")]
   public static extern global::System.IntPtr Value__CreateOneHotDouble__SWIG_7(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchFloat__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchFloat__SWIG_2")]
   public static extern global::System.IntPtr Value__CreateBatchFloat__SWIG_2(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchFloat__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchFloat__SWIG_3")]
   public static extern global::System.IntPtr Value__CreateBatchFloat__SWIG_3(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchDouble__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchDouble__SWIG_2")]
   public static extern global::System.IntPtr Value__CreateBatchDouble__SWIG_2(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchDouble__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateBatchDouble__SWIG_3")]
   public static extern global::System.IntPtr Value__CreateBatchDouble__SWIG_3(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_2")]
   public static extern global::System.IntPtr Value__CreateSequenceFloat__SWIG_2(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_3")]
   public static extern global::System.IntPtr Value__CreateSequenceFloat__SWIG_3(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_2")]
   public static extern global::System.IntPtr Value__CreateSequenceDouble__SWIG_2(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_3")]
   public static extern global::System.IntPtr Value__CreateSequenceDouble__SWIG_3(uint jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_4")]
   public static extern global::System.IntPtr Value__CreateSequenceFloat__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg4, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg5, uint jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8, bool jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_5")]
   public static extern global::System.IntPtr Value__CreateSequenceFloat__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg4, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg5, uint jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_4")]
   public static extern global::System.IntPtr Value__CreateSequenceDouble__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg4, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg5, uint jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8, bool jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_5")]
   public static extern global::System.IntPtr Value__CreateSequenceDouble__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg4, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg5, uint jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_6")]
   public static extern global::System.IntPtr Value__CreateSequenceFloat__SWIG_6(uint jarg1, uint jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg4, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg5, uint jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8, bool jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceFloat__SWIG_7")]
   public static extern global::System.IntPtr Value__CreateSequenceFloat__SWIG_7(uint jarg1, uint jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg4, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]float[] jarg5, uint jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_6")]
   public static extern global::System.IntPtr Value__CreateSequenceDouble__SWIG_6(uint jarg1, uint jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg4, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg5, uint jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8, bool jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CreateSequenceDouble__SWIG_7")]
   public static extern global::System.IntPtr Value__CreateSequenceDouble__SWIG_7(uint jarg1, uint jarg2, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg4, [global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]double[] jarg5, uint jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CopyVariableValueToFloat__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CopyVariableValueToFloat__SWIG_0")]
   public static extern void Value__CopyVariableValueToFloat__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CopyVariableValueToDouble__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CopyVariableValueToDouble__SWIG_0")]
   public static extern void Value__CopyVariableValueToDouble__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CopyVariableValueToFloat__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CopyVariableValueToFloat__SWIG_1")]
   public static extern void Value__CopyVariableValueToFloat__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.Out, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, [global::System.Runtime.InteropServices.Out, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Value__CopyVariableValueToDouble__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Value__CopyVariableValueToDouble__SWIG_1")]
   public static extern void Value__CopyVariableValueToDouble__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.Out, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, [global::System.Runtime.InteropServices.Out, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]int[] jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_PrintNodeTiming")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_PrintNodeTiming")]
   public static extern void Function_PrintNodeTiming(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_Function")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_Function")]
   public static extern void delete_Function(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__OpName")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__OpName")]
   public static extern string Function__OpName(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__CurrentVersion")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__CurrentVersion")]
   public static extern uint Function__CurrentVersion(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Clone__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Clone__SWIG_0")]
   public static extern global::System.IntPtr Function__Clone__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Evaluate__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Evaluate__SWIG_0")]
   public static extern void Function__Evaluate__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Evaluate__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Evaluate__SWIG_1")]
   public static extern void Function__Evaluate__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Clone__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Clone__SWIG_1")]
   public static extern global::System.IntPtr Function__Clone__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Clone__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Clone__SWIG_2")]
   public static extern global::System.IntPtr Function__Clone__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Clone__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Clone__SWIG_3")]
   public static extern global::System.IntPtr Function__Clone__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_CloneFlattened__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_CloneFlattened__SWIG_0")]
   public static extern global::System.IntPtr Function_CloneFlattened__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_CloneFlattened__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_CloneFlattened__SWIG_1")]
   public static extern global::System.IntPtr Function_CloneFlattened__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Name")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Name")]
   public static extern string Function__Name(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_SetName")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_SetName")]
   public static extern void Function_SetName(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Uid")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Uid")]
   public static extern string Function__Uid(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__RootFunction")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__RootFunction")]
   public static extern global::System.IntPtr Function__RootFunction(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__IsComposite")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__IsComposite")]
   public static extern bool Function__IsComposite(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__IsPrimitive")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__IsPrimitive")]
   public static extern bool Function__IsPrimitive(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__IsBlock")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__IsBlock")]
   public static extern bool Function__IsBlock(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_BlockRoot")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_BlockRoot")]
   public static extern global::System.IntPtr Function_BlockRoot(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_BlockArgumentsMapping")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_BlockArgumentsMapping")]
   public static extern global::System.IntPtr Function_BlockArgumentsMapping(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Inputs__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Inputs__SWIG_0")]
   public static extern global::System.IntPtr Function__Inputs__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Inputs__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Inputs__SWIG_1")]
   public static extern global::System.IntPtr Function__Inputs__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Output")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Output")]
   public static extern global::System.IntPtr Function__Output(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Outputs")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Outputs")]
   public static extern global::System.IntPtr Function__Outputs(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Arguments__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Arguments__SWIG_0")]
   public static extern global::System.IntPtr Function__Arguments__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Arguments__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Arguments__SWIG_1")]
   public static extern global::System.IntPtr Function__Arguments__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Parameters")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Parameters")]
   public static extern global::System.IntPtr Function__Parameters(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_Constants")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_Constants")]
   public static extern global::System.IntPtr Function_Constants(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_Placeholders")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_Placeholders")]
   public static extern global::System.IntPtr Function_Placeholders(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__FindByName__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__FindByName__SWIG_0")]
   public static extern global::System.IntPtr Function__FindByName__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__FindByName__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__FindByName__SWIG_1")]
   public static extern global::System.IntPtr Function__FindByName__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__FindAllWithName__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__FindAllWithName__SWIG_0")]
   public static extern global::System.IntPtr Function__FindAllWithName__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__FindAllWithName__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__FindAllWithName__SWIG_1")]
   public static extern global::System.IntPtr Function__FindAllWithName__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_Attributes")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_Attributes")]
   public static extern global::System.IntPtr Function_Attributes(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_ReplacePlaceholders")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_ReplacePlaceholders")]
   public static extern global::System.IntPtr Function_ReplacePlaceholders(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_ReplacePlaceholder")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_ReplacePlaceholder")]
   public static extern global::System.IntPtr Function_ReplacePlaceholder(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Save__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Save__SWIG_0")]
   public static extern void Function__Save__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Save__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Save__SWIG_1")]
   public static extern void Function__Save__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, int jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Save__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Save__SWIG_2")]
   public static extern void Function__Save__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Save__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Save__SWIG_3")]
   public static extern void Function__Save__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_Restore")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_Restore")]
   public static extern void Function_Restore(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_0")]
   public static extern global::System.IntPtr Function__Load__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_1")]
   public static extern global::System.IntPtr Function__Load__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_2")]
   public static extern global::System.IntPtr Function__Load__SWIG_2([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_3")]
   public static extern global::System.IntPtr Function__Load__SWIG_3(byte[] jarg1, uint jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, int jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_4")]
   public static extern global::System.IntPtr Function__Load__SWIG_4(byte[] jarg1, uint jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function__Load__SWIG_5")]
   public static extern global::System.IntPtr Function__Load__SWIG_5(byte[] jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_AsString__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_AsString__SWIG_0")]
   public static extern string Function_AsString__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_AsString__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_AsString__SWIG_1")]
   public static extern string Function_AsString__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_GetCustomAttributes")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_GetCustomAttributes")]
   public static extern global::System.IntPtr Function_GetCustomAttributes(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_ResetCustomAttributes")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_ResetCustomAttributes")]
   public static extern void Function_ResetCustomAttributes(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Function_MaxNumOutputs_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Function_MaxNumOutputs_get")]
   public static extern int Function_MaxNumOutputs_get();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementAnd__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementAnd__SWIG_0")]
   public static extern global::System.IntPtr ElementAnd__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementAnd__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementAnd__SWIG_1")]
   public static extern global::System.IntPtr ElementAnd__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementNot__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementNot__SWIG_0")]
   public static extern global::System.IntPtr ElementNot__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementNot__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementNot__SWIG_1")]
   public static extern global::System.IntPtr ElementNot__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementOr__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementOr__SWIG_0")]
   public static extern global::System.IntPtr ElementOr__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementOr__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementOr__SWIG_1")]
   public static extern global::System.IntPtr ElementOr__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementXor__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementXor__SWIG_0")]
   public static extern global::System.IntPtr ElementXor__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementXor__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementXor__SWIG_1")]
   public static extern global::System.IntPtr ElementXor__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Negate__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Negate__SWIG_0")]
   public static extern global::System.IntPtr Negate__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Negate__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Negate__SWIG_1")]
   public static extern global::System.IntPtr Negate__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Sigmoid__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Sigmoid__SWIG_0")]
   public static extern global::System.IntPtr Sigmoid__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Sigmoid__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Sigmoid__SWIG_1")]
   public static extern global::System.IntPtr Sigmoid__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Atanh__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Atanh__SWIG_0")]
   public static extern global::System.IntPtr Atanh__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Atanh__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Atanh__SWIG_1")]
   public static extern global::System.IntPtr Atanh__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Tanh__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Tanh__SWIG_0")]
   public static extern global::System.IntPtr Tanh__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Tanh__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Tanh__SWIG_1")]
   public static extern global::System.IntPtr Tanh__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Asin__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Asin__SWIG_0")]
   public static extern global::System.IntPtr Asin__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Asin__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Asin__SWIG_1")]
   public static extern global::System.IntPtr Asin__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Sin__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Sin__SWIG_0")]
   public static extern global::System.IntPtr Sin__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Sin__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Sin__SWIG_1")]
   public static extern global::System.IntPtr Sin__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Acos__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Acos__SWIG_0")]
   public static extern global::System.IntPtr Acos__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Acos__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Acos__SWIG_1")]
   public static extern global::System.IntPtr Acos__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Cos__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Cos__SWIG_0")]
   public static extern global::System.IntPtr Cos__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Cos__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Cos__SWIG_1")]
   public static extern global::System.IntPtr Cos__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Atan__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Atan__SWIG_0")]
   public static extern global::System.IntPtr Atan__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Atan__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Atan__SWIG_1")]
   public static extern global::System.IntPtr Atan__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Tan__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Tan__SWIG_0")]
   public static extern global::System.IntPtr Tan__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Tan__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Tan__SWIG_1")]
   public static extern global::System.IntPtr Tan__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Cosh__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Cosh__SWIG_0")]
   public static extern global::System.IntPtr Cosh__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Cosh__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Cosh__SWIG_1")]
   public static extern global::System.IntPtr Cosh__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Asinh__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Asinh__SWIG_0")]
   public static extern global::System.IntPtr Asinh__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Asinh__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Asinh__SWIG_1")]
   public static extern global::System.IntPtr Asinh__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Sinh__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Sinh__SWIG_0")]
   public static extern global::System.IntPtr Sinh__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Sinh__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Sinh__SWIG_1")]
   public static extern global::System.IntPtr Sinh__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReLU__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReLU__SWIG_0")]
   public static extern global::System.IntPtr ReLU__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReLU__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReLU__SWIG_1")]
   public static extern global::System.IntPtr ReLU__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Exp__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Exp__SWIG_0")]
   public static extern global::System.IntPtr Exp__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Exp__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Exp__SWIG_1")]
   public static extern global::System.IntPtr Exp__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Log__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Log__SWIG_0")]
   public static extern global::System.IntPtr Log__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Log__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Log__SWIG_1")]
   public static extern global::System.IntPtr Log__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Square__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Square__SWIG_0")]
   public static extern global::System.IntPtr Square__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Square__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Square__SWIG_1")]
   public static extern global::System.IntPtr Square__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Sqrt__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Sqrt__SWIG_0")]
   public static extern global::System.IntPtr Sqrt__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Sqrt__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Sqrt__SWIG_1")]
   public static extern global::System.IntPtr Sqrt__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Round__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Round__SWIG_0")]
   public static extern global::System.IntPtr Round__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Round__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Round__SWIG_1")]
   public static extern global::System.IntPtr Round__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Floor__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Floor__SWIG_0")]
   public static extern global::System.IntPtr Floor__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Floor__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Floor__SWIG_1")]
   public static extern global::System.IntPtr Floor__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Ceil__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Ceil__SWIG_0")]
   public static extern global::System.IntPtr Ceil__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Ceil__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Ceil__SWIG_1")]
   public static extern global::System.IntPtr Ceil__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Abs__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Abs__SWIG_0")]
   public static extern global::System.IntPtr Abs__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Abs__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Abs__SWIG_1")]
   public static extern global::System.IntPtr Abs__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Reciprocal__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Reciprocal__SWIG_0")]
   public static extern global::System.IntPtr Reciprocal__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Reciprocal__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Reciprocal__SWIG_1")]
   public static extern global::System.IntPtr Reciprocal__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Softmax__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Softmax__SWIG_0")]
   public static extern global::System.IntPtr Softmax__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Softmax__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Softmax__SWIG_1")]
   public static extern global::System.IntPtr Softmax__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Softmax__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Softmax__SWIG_2")]
   public static extern global::System.IntPtr Softmax__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Softmax__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Softmax__SWIG_3")]
   public static extern global::System.IntPtr Softmax__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LogSoftmax__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LogSoftmax__SWIG_0")]
   public static extern global::System.IntPtr LogSoftmax__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LogSoftmax__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LogSoftmax__SWIG_1")]
   public static extern global::System.IntPtr LogSoftmax__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LogSoftmax__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LogSoftmax__SWIG_2")]
   public static extern global::System.IntPtr LogSoftmax__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LogSoftmax__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LogSoftmax__SWIG_3")]
   public static extern global::System.IntPtr LogSoftmax__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Hardmax__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Hardmax__SWIG_0")]
   public static extern global::System.IntPtr Hardmax__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Hardmax__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Hardmax__SWIG_1")]
   public static extern global::System.IntPtr Hardmax__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HardSigmoid__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HardSigmoid__SWIG_0")]
   public static extern global::System.IntPtr HardSigmoid__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2, float jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HardSigmoid__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HardSigmoid__SWIG_1")]
   public static extern global::System.IntPtr HardSigmoid__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2, float jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TopK__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TopK__SWIG_0")]
   public static extern global::System.IntPtr TopK__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TopK__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TopK__SWIG_1")]
   public static extern global::System.IntPtr TopK__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TopK__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TopK__SWIG_2")]
   public static extern global::System.IntPtr TopK__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TopK__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TopK__SWIG_3")]
   public static extern global::System.IntPtr TopK__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TransposeAxes__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TransposeAxes__SWIG_0")]
   public static extern global::System.IntPtr TransposeAxes__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TransposeAxes__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TransposeAxes__SWIG_1")]
   public static extern global::System.IntPtr TransposeAxes__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Transpose__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Transpose__SWIG_0")]
   public static extern global::System.IntPtr Transpose__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Transpose__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Transpose__SWIG_1")]
   public static extern global::System.IntPtr Transpose__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Transpose__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Transpose__SWIG_2")]
   public static extern global::System.IntPtr Transpose__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Transpose__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Transpose__SWIG_3")]
   public static extern global::System.IntPtr Transpose__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Slice__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Slice__SWIG_0")]
   public static extern global::System.IntPtr Slice__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Slice__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Slice__SWIG_1")]
   public static extern global::System.IntPtr Slice__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Slice__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Slice__SWIG_2")]
   public static extern global::System.IntPtr Slice__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Slice__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Slice__SWIG_3")]
   public static extern global::System.IntPtr Slice__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ToBatch__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ToBatch__SWIG_0")]
   public static extern global::System.IntPtr ToBatch__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ToBatch__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ToBatch__SWIG_1")]
   public static extern global::System.IntPtr ToBatch__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UnpackBatch")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UnpackBatch")]
   public static extern global::System.IntPtr UnpackBatch(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pad__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pad__SWIG_0")]
   public static extern global::System.IntPtr Pad__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, double jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pad__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pad__SWIG_1")]
   public static extern global::System.IntPtr Pad__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, double jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pad__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pad__SWIG_2")]
   public static extern global::System.IntPtr Pad__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_RandomSample__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_RandomSample__SWIG_0")]
   public static extern global::System.IntPtr RandomSample__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, bool jarg3, uint jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_RandomSample__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_RandomSample__SWIG_1")]
   public static extern global::System.IntPtr RandomSample__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, bool jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_RandomSample__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_RandomSample__SWIG_2")]
   public static extern global::System.IntPtr RandomSample__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_RandomSampleInclusionFrequency__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_RandomSampleInclusionFrequency__SWIG_0")]
   public static extern global::System.IntPtr RandomSampleInclusionFrequency__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, bool jarg3, uint jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_RandomSampleInclusionFrequency__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_RandomSampleInclusionFrequency__SWIG_1")]
   public static extern global::System.IntPtr RandomSampleInclusionFrequency__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, bool jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_RandomSampleInclusionFrequency__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_RandomSampleInclusionFrequency__SWIG_2")]
   public static extern global::System.IntPtr RandomSampleInclusionFrequency__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Dropout__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Dropout__SWIG_0")]
   public static extern global::System.IntPtr Dropout__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Dropout__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Dropout__SWIG_1")]
   public static extern global::System.IntPtr Dropout__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Dropout__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Dropout__SWIG_2")]
   public static extern global::System.IntPtr Dropout__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformRandom__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformRandom__SWIG_0")]
   public static extern global::System.IntPtr UniformRandom__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, double jarg4, uint jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformRandom__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformRandom__SWIG_1")]
   public static extern global::System.IntPtr UniformRandom__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, double jarg4, uint jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformRandom__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformRandom__SWIG_2")]
   public static extern global::System.IntPtr UniformRandom__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, double jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformRandom__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformRandom__SWIG_3")]
   public static extern global::System.IntPtr UniformRandom__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformRandom__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformRandom__SWIG_4")]
   public static extern global::System.IntPtr UniformRandom__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformRandomLike__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformRandomLike__SWIG_0")]
   public static extern global::System.IntPtr UniformRandomLike__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, uint jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformRandomLike__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformRandomLike__SWIG_1")]
   public static extern global::System.IntPtr UniformRandomLike__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformRandomLike__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformRandomLike__SWIG_2")]
   public static extern global::System.IntPtr UniformRandomLike__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformRandomLike__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformRandomLike__SWIG_3")]
   public static extern global::System.IntPtr UniformRandomLike__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_UniformRandomLike__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_UniformRandomLike__SWIG_4")]
   public static extern global::System.IntPtr UniformRandomLike__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalRandom__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalRandom__SWIG_0")]
   public static extern global::System.IntPtr NormalRandom__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, double jarg4, uint jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalRandom__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalRandom__SWIG_1")]
   public static extern global::System.IntPtr NormalRandom__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, double jarg4, uint jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalRandom__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalRandom__SWIG_2")]
   public static extern global::System.IntPtr NormalRandom__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, double jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalRandom__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalRandom__SWIG_3")]
   public static extern global::System.IntPtr NormalRandom__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalRandom__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalRandom__SWIG_4")]
   public static extern global::System.IntPtr NormalRandom__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalRandomLike__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalRandomLike__SWIG_0")]
   public static extern global::System.IntPtr NormalRandomLike__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, uint jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalRandomLike__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalRandomLike__SWIG_1")]
   public static extern global::System.IntPtr NormalRandomLike__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalRandomLike__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalRandomLike__SWIG_2")]
   public static extern global::System.IntPtr NormalRandomLike__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalRandomLike__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalRandomLike__SWIG_3")]
   public static extern global::System.IntPtr NormalRandomLike__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NormalRandomLike__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NormalRandomLike__SWIG_4")]
   public static extern global::System.IntPtr NormalRandomLike__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GumbelRandom__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GumbelRandom__SWIG_0")]
   public static extern global::System.IntPtr GumbelRandom__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, double jarg4, uint jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GumbelRandom__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GumbelRandom__SWIG_1")]
   public static extern global::System.IntPtr GumbelRandom__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, double jarg4, uint jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GumbelRandom__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GumbelRandom__SWIG_2")]
   public static extern global::System.IntPtr GumbelRandom__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, double jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GumbelRandom__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GumbelRandom__SWIG_3")]
   public static extern global::System.IntPtr GumbelRandom__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GumbelRandom__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GumbelRandom__SWIG_4")]
   public static extern global::System.IntPtr GumbelRandom__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GumbelRandomLike__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GumbelRandomLike__SWIG_0")]
   public static extern global::System.IntPtr GumbelRandomLike__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, uint jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GumbelRandomLike__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GumbelRandomLike__SWIG_1")]
   public static extern global::System.IntPtr GumbelRandomLike__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GumbelRandomLike__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GumbelRandomLike__SWIG_2")]
   public static extern global::System.IntPtr GumbelRandomLike__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GumbelRandomLike__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GumbelRandomLike__SWIG_3")]
   public static extern global::System.IntPtr GumbelRandomLike__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GumbelRandomLike__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GumbelRandomLike__SWIG_4")]
   public static extern global::System.IntPtr GumbelRandomLike__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BernoulliRandom__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BernoulliRandom__SWIG_0")]
   public static extern global::System.IntPtr BernoulliRandom__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, uint jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BernoulliRandom__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BernoulliRandom__SWIG_1")]
   public static extern global::System.IntPtr BernoulliRandom__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BernoulliRandom__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BernoulliRandom__SWIG_2")]
   public static extern global::System.IntPtr BernoulliRandom__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BernoulliRandom__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BernoulliRandom__SWIG_3")]
   public static extern global::System.IntPtr BernoulliRandom__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BernoulliRandomLike__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BernoulliRandomLike__SWIG_0")]
   public static extern global::System.IntPtr BernoulliRandomLike__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BernoulliRandomLike__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BernoulliRandomLike__SWIG_1")]
   public static extern global::System.IntPtr BernoulliRandomLike__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BernoulliRandomLike__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BernoulliRandomLike__SWIG_2")]
   public static extern global::System.IntPtr BernoulliRandomLike__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BernoulliRandomLike__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BernoulliRandomLike__SWIG_3")]
   public static extern global::System.IntPtr BernoulliRandomLike__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Flatten__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Flatten__SWIG_0")]
   public static extern global::System.IntPtr Flatten__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Flatten__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Flatten__SWIG_1")]
   public static extern global::System.IntPtr Flatten__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Flatten__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Flatten__SWIG_2")]
   public static extern global::System.IntPtr Flatten__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Flatten__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Flatten__SWIG_3")]
   public static extern global::System.IntPtr Flatten__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Reshape__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Reshape__SWIG_0")]
   public static extern global::System.IntPtr Reshape__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Reshape__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Reshape__SWIG_1")]
   public static extern global::System.IntPtr Reshape__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Reshape__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Reshape__SWIG_2")]
   public static extern global::System.IntPtr Reshape__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Reshape__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Reshape__SWIG_3")]
   public static extern global::System.IntPtr Reshape__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Squeeze__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Squeeze__SWIG_0")]
   public static extern global::System.IntPtr Squeeze__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Squeeze__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Squeeze__SWIG_1")]
   public static extern global::System.IntPtr Squeeze__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Squeeze__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Squeeze__SWIG_2")]
   public static extern global::System.IntPtr Squeeze__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Squeeze__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Squeeze__SWIG_3")]
   public static extern global::System.IntPtr Squeeze__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ExpandDims__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ExpandDims__SWIG_0")]
   public static extern global::System.IntPtr ExpandDims__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ExpandDims__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ExpandDims__SWIG_1")]
   public static extern global::System.IntPtr ExpandDims__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantLike__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantLike__SWIG_0")]
   public static extern global::System.IntPtr ConstantLike__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConstantLike__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConstantLike__SWIG_1")]
   public static extern global::System.IntPtr ConstantLike__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ZerosLike__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ZerosLike__SWIG_0")]
   public static extern global::System.IntPtr ZerosLike__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ZerosLike__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ZerosLike__SWIG_1")]
   public static extern global::System.IntPtr ZerosLike__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OnesLike__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OnesLike__SWIG_0")]
   public static extern global::System.IntPtr OnesLike__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OnesLike__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OnesLike__SWIG_1")]
   public static extern global::System.IntPtr OnesLike__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_EyeLike__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_EyeLike__SWIG_0")]
   public static extern global::System.IntPtr EyeLike__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_EyeLike__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_EyeLike__SWIG_1")]
   public static extern global::System.IntPtr EyeLike__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Plus__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Plus__SWIG_0")]
   public static extern global::System.IntPtr Plus__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Plus__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Plus__SWIG_1")]
   public static extern global::System.IntPtr Plus__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Minus__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Minus__SWIG_0")]
   public static extern global::System.IntPtr Minus__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Minus__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Minus__SWIG_1")]
   public static extern global::System.IntPtr Minus__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LogAddExp__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LogAddExp__SWIG_0")]
   public static extern global::System.IntPtr LogAddExp__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LogAddExp__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LogAddExp__SWIG_1")]
   public static extern global::System.IntPtr LogAddExp__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pow__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pow__SWIG_0")]
   public static extern global::System.IntPtr Pow__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pow__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pow__SWIG_1")]
   public static extern global::System.IntPtr Pow__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementTimes__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementTimes__SWIG_0")]
   public static extern global::System.IntPtr ElementTimes__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementTimes__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementTimes__SWIG_1")]
   public static extern global::System.IntPtr ElementTimes__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementDivide__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementDivide__SWIG_0")]
   public static extern global::System.IntPtr ElementDivide__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementDivide__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementDivide__SWIG_1")]
   public static extern global::System.IntPtr ElementDivide__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementMax")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementMax")]
   public static extern global::System.IntPtr ElementMax(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementMin")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementMin")]
   public static extern global::System.IntPtr ElementMin(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Equal__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Equal__SWIG_0")]
   public static extern global::System.IntPtr Equal__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Equal__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Equal__SWIG_1")]
   public static extern global::System.IntPtr Equal__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NotEqual__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NotEqual__SWIG_0")]
   public static extern global::System.IntPtr NotEqual__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NotEqual__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NotEqual__SWIG_1")]
   public static extern global::System.IntPtr NotEqual__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Less__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Less__SWIG_0")]
   public static extern global::System.IntPtr Less__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Less__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Less__SWIG_1")]
   public static extern global::System.IntPtr Less__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LessEqual__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LessEqual__SWIG_0")]
   public static extern global::System.IntPtr LessEqual__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LessEqual__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LessEqual__SWIG_1")]
   public static extern global::System.IntPtr LessEqual__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Greater__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Greater__SWIG_0")]
   public static extern global::System.IntPtr Greater__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Greater__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Greater__SWIG_1")]
   public static extern global::System.IntPtr Greater__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GreaterEqual__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GreaterEqual__SWIG_0")]
   public static extern global::System.IntPtr GreaterEqual__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GreaterEqual__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GreaterEqual__SWIG_1")]
   public static extern global::System.IntPtr GreaterEqual__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Times__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Times__SWIG_0")]
   public static extern global::System.IntPtr Times__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, int jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Times__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Times__SWIG_1")]
   public static extern global::System.IntPtr Times__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, int jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Times__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Times__SWIG_2")]
   public static extern global::System.IntPtr Times__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Times__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Times__SWIG_3")]
   public static extern global::System.IntPtr Times__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Times__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Times__SWIG_4")]
   public static extern global::System.IntPtr Times__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Times__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Times__SWIG_5")]
   public static extern global::System.IntPtr Times__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TransposeTimes__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TransposeTimes__SWIG_0")]
   public static extern global::System.IntPtr TransposeTimes__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TransposeTimes__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TransposeTimes__SWIG_1")]
   public static extern global::System.IntPtr TransposeTimes__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TransposeTimes__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TransposeTimes__SWIG_2")]
   public static extern global::System.IntPtr TransposeTimes__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TransposeTimes__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TransposeTimes__SWIG_3")]
   public static extern global::System.IntPtr TransposeTimes__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CosineDistance__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CosineDistance__SWIG_0")]
   public static extern global::System.IntPtr CosineDistance__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CosineDistance__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CosineDistance__SWIG_1")]
   public static extern global::System.IntPtr CosineDistance__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CosineDistanceWithNegativeSamples__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CosineDistanceWithNegativeSamples__SWIG_0")]
   public static extern global::System.IntPtr CosineDistanceWithNegativeSamples__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, uint jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CosineDistanceWithNegativeSamples__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CosineDistanceWithNegativeSamples__SWIG_1")]
   public static extern global::System.IntPtr CosineDistanceWithNegativeSamples__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BinaryCrossEntropy__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BinaryCrossEntropy__SWIG_0")]
   public static extern global::System.IntPtr BinaryCrossEntropy__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BinaryCrossEntropy__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BinaryCrossEntropy__SWIG_1")]
   public static extern global::System.IntPtr BinaryCrossEntropy__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_WeightedBinaryCrossEntropy__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_WeightedBinaryCrossEntropy__SWIG_0")]
   public static extern global::System.IntPtr WeightedBinaryCrossEntropy__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_WeightedBinaryCrossEntropy__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_WeightedBinaryCrossEntropy__SWIG_1")]
   public static extern global::System.IntPtr WeightedBinaryCrossEntropy__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SquaredError__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SquaredError__SWIG_0")]
   public static extern global::System.IntPtr SquaredError__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SquaredError__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SquaredError__SWIG_1")]
   public static extern global::System.IntPtr SquaredError__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CrossEntropyWithSoftmax__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CrossEntropyWithSoftmax__SWIG_0")]
   public static extern global::System.IntPtr CrossEntropyWithSoftmax__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CrossEntropyWithSoftmax__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CrossEntropyWithSoftmax__SWIG_1")]
   public static extern global::System.IntPtr CrossEntropyWithSoftmax__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CrossEntropyWithSoftmax__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CrossEntropyWithSoftmax__SWIG_2")]
   public static extern global::System.IntPtr CrossEntropyWithSoftmax__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CrossEntropyWithSoftmax__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CrossEntropyWithSoftmax__SWIG_3")]
   public static extern global::System.IntPtr CrossEntropyWithSoftmax__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_EditDistanceError__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_EditDistanceError__SWIG_0")]
   public static extern global::System.IntPtr EditDistanceError__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, float jarg3, float jarg4, float jarg5, bool jarg6, global::System.Runtime.InteropServices.HandleRef jarg7, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_EditDistanceError__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_EditDistanceError__SWIG_1")]
   public static extern global::System.IntPtr EditDistanceError__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, float jarg3, float jarg4, float jarg5, bool jarg6, global::System.Runtime.InteropServices.HandleRef jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LatticeSequenceWithSoftmax__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LatticeSequenceWithSoftmax__SWIG_0")]
   public static extern global::System.IntPtr LatticeSequenceWithSoftmax__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg7, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg8, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg9, float jarg10, float jarg11, bool jarg12, bool jarg13, float jarg14, float jarg15, float jarg16, float jarg17, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg18);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LatticeSequenceWithSoftmax__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LatticeSequenceWithSoftmax__SWIG_1")]
   public static extern global::System.IntPtr LatticeSequenceWithSoftmax__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg7, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg8, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg9, float jarg10, float jarg11, bool jarg12, bool jarg13, float jarg14, float jarg15, float jarg16, float jarg17);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ForwardBackward__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ForwardBackward__SWIG_0")]
   public static extern global::System.IntPtr ForwardBackward__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, int jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ForwardBackward__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ForwardBackward__SWIG_1")]
   public static extern global::System.IntPtr ForwardBackward__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, int jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LabelsToGraph__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LabelsToGraph__SWIG_0")]
   public static extern global::System.IntPtr LabelsToGraph__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LabelsToGraph__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LabelsToGraph__SWIG_1")]
   public static extern global::System.IntPtr LabelsToGraph__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_0")]
   public static extern global::System.IntPtr ClassificationError__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_1")]
   public static extern global::System.IntPtr ClassificationError__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_2")]
   public static extern global::System.IntPtr ClassificationError__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_3")]
   public static extern global::System.IntPtr ClassificationError__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_4")]
   public static extern global::System.IntPtr ClassificationError__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_5")]
   public static extern global::System.IntPtr ClassificationError__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_6")]
   public static extern global::System.IntPtr ClassificationError__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ClassificationError__SWIG_7")]
   public static extern global::System.IntPtr ClassificationError__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DepthToSpace__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DepthToSpace__SWIG_0")]
   public static extern global::System.IntPtr DepthToSpace__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_DepthToSpace__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_DepthToSpace__SWIG_1")]
   public static extern global::System.IntPtr DepthToSpace__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SpaceToDepth__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SpaceToDepth__SWIG_0")]
   public static extern global::System.IntPtr SpaceToDepth__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SpaceToDepth__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SpaceToDepth__SWIG_1")]
   public static extern global::System.IntPtr SpaceToDepth__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LambdaRank__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LambdaRank__SWIG_0")]
   public static extern global::System.IntPtr LambdaRank__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LambdaRank__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LambdaRank__SWIG_1")]
   public static extern global::System.IntPtr LambdaRank__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDCGAt1__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDCGAt1__SWIG_0")]
   public static extern global::System.IntPtr NDCGAt1__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_NDCGAt1__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_NDCGAt1__SWIG_1")]
   public static extern global::System.IntPtr NDCGAt1__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_0")]
   public static extern global::System.IntPtr PastValue__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_1")]
   public static extern global::System.IntPtr PastValue__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_2")]
   public static extern global::System.IntPtr PastValue__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_3")]
   public static extern global::System.IntPtr PastValue__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_4")]
   public static extern global::System.IntPtr PastValue__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PastValue__SWIG_5")]
   public static extern global::System.IntPtr PastValue__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_0")]
   public static extern global::System.IntPtr FutureValue__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_1")]
   public static extern global::System.IntPtr FutureValue__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_2")]
   public static extern global::System.IntPtr FutureValue__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_3")]
   public static extern global::System.IntPtr FutureValue__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_4")]
   public static extern global::System.IntPtr FutureValue__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FutureValue__SWIG_5")]
   public static extern global::System.IntPtr FutureValue__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OneHotOp__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OneHotOp__SWIG_0")]
   public static extern global::System.IntPtr OneHotOp__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, bool jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OneHotOp__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OneHotOp__SWIG_1")]
   public static extern global::System.IntPtr OneHotOp__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, bool jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GatherOp__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GatherOp__SWIG_0")]
   public static extern global::System.IntPtr GatherOp__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GatherOp__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GatherOp__SWIG_1")]
   public static extern global::System.IntPtr GatherOp__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GatherOp__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GatherOp__SWIG_2")]
   public static extern global::System.IntPtr GatherOp__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GatherOp__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GatherOp__SWIG_3")]
   public static extern global::System.IntPtr GatherOp__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceSum__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceSum__SWIG_0")]
   public static extern global::System.IntPtr ReduceSum__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceSum__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceSum__SWIG_1")]
   public static extern global::System.IntPtr ReduceSum__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceLogSum__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceLogSum__SWIG_0")]
   public static extern global::System.IntPtr ReduceLogSum__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceLogSum__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceLogSum__SWIG_1")]
   public static extern global::System.IntPtr ReduceLogSum__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMean__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMean__SWIG_0")]
   public static extern global::System.IntPtr ReduceMean__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMean__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMean__SWIG_1")]
   public static extern global::System.IntPtr ReduceMean__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMax__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMax__SWIG_0")]
   public static extern global::System.IntPtr ReduceMax__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMax__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMax__SWIG_1")]
   public static extern global::System.IntPtr ReduceMax__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMin__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMin__SWIG_0")]
   public static extern global::System.IntPtr ReduceMin__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMin__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMin__SWIG_1")]
   public static extern global::System.IntPtr ReduceMin__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceProd__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceProd__SWIG_0")]
   public static extern global::System.IntPtr ReduceProd__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceProd__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceProd__SWIG_1")]
   public static extern global::System.IntPtr ReduceProd__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceSum__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceSum__SWIG_2")]
   public static extern global::System.IntPtr ReduceSum__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceSum__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceSum__SWIG_3")]
   public static extern global::System.IntPtr ReduceSum__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceSum__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceSum__SWIG_4")]
   public static extern global::System.IntPtr ReduceSum__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceLogSum__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceLogSum__SWIG_2")]
   public static extern global::System.IntPtr ReduceLogSum__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceLogSum__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceLogSum__SWIG_3")]
   public static extern global::System.IntPtr ReduceLogSum__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceLogSum__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceLogSum__SWIG_4")]
   public static extern global::System.IntPtr ReduceLogSum__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMean__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMean__SWIG_2")]
   public static extern global::System.IntPtr ReduceMean__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMean__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMean__SWIG_3")]
   public static extern global::System.IntPtr ReduceMean__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMean__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMean__SWIG_4")]
   public static extern global::System.IntPtr ReduceMean__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMax__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMax__SWIG_2")]
   public static extern global::System.IntPtr ReduceMax__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMax__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMax__SWIG_3")]
   public static extern global::System.IntPtr ReduceMax__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMax__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMax__SWIG_4")]
   public static extern global::System.IntPtr ReduceMax__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMin__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMin__SWIG_2")]
   public static extern global::System.IntPtr ReduceMin__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMin__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMin__SWIG_3")]
   public static extern global::System.IntPtr ReduceMin__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceMin__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceMin__SWIG_4")]
   public static extern global::System.IntPtr ReduceMin__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceProd__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceProd__SWIG_2")]
   public static extern global::System.IntPtr ReduceProd__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceProd__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceProd__SWIG_3")]
   public static extern global::System.IntPtr ReduceProd__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceProd__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceProd__SWIG_4")]
   public static extern global::System.IntPtr ReduceProd__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceL1__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceL1__SWIG_0")]
   public static extern global::System.IntPtr ReduceL1__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceL1__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceL1__SWIG_1")]
   public static extern global::System.IntPtr ReduceL1__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceL1__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceL1__SWIG_2")]
   public static extern global::System.IntPtr ReduceL1__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceL2__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceL2__SWIG_0")]
   public static extern global::System.IntPtr ReduceL2__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceL2__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceL2__SWIG_1")]
   public static extern global::System.IntPtr ReduceL2__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceL2__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceL2__SWIG_2")]
   public static extern global::System.IntPtr ReduceL2__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceSumSquare__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceSumSquare__SWIG_0")]
   public static extern global::System.IntPtr ReduceSumSquare__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceSumSquare__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceSumSquare__SWIG_1")]
   public static extern global::System.IntPtr ReduceSumSquare__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReduceSumSquare__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReduceSumSquare__SWIG_2")]
   public static extern global::System.IntPtr ReduceSumSquare__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ImageScaler")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ImageScaler")]
   public static extern global::System.IntPtr ImageScaler(global::System.Runtime.InteropServices.HandleRef jarg1, float jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PerDimMeanVarianceNormalize__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PerDimMeanVarianceNormalize__SWIG_0")]
   public static extern global::System.IntPtr PerDimMeanVarianceNormalize__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PerDimMeanVarianceNormalize__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PerDimMeanVarianceNormalize__SWIG_1")]
   public static extern global::System.IntPtr PerDimMeanVarianceNormalize__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PerDimMeanVarianceNormalize__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PerDimMeanVarianceNormalize__SWIG_2")]
   public static extern global::System.IntPtr PerDimMeanVarianceNormalize__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PerDimMeanVarianceNormalize__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PerDimMeanVarianceNormalize__SWIG_3")]
   public static extern global::System.IntPtr PerDimMeanVarianceNormalize__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_0")]
   public static extern global::System.IntPtr MeanVarianceNormalization__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, bool jarg3, bool jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_1")]
   public static extern global::System.IntPtr MeanVarianceNormalization__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, bool jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_2")]
   public static extern global::System.IntPtr MeanVarianceNormalization__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_3")]
   public static extern global::System.IntPtr MeanVarianceNormalization__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_4")]
   public static extern global::System.IntPtr MeanVarianceNormalization__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_5")]
   public static extern global::System.IntPtr MeanVarianceNormalization__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_6")]
   public static extern global::System.IntPtr MeanVarianceNormalization__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MeanVarianceNormalization__SWIG_7")]
   public static extern global::System.IntPtr MeanVarianceNormalization__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_0")]
   public static extern global::System.IntPtr Convolution__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, uint jarg7, uint jarg8, uint jarg9, bool jarg10, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg11);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_1")]
   public static extern global::System.IntPtr Convolution__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, uint jarg7, uint jarg8, uint jarg9, bool jarg10);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_2")]
   public static extern global::System.IntPtr Convolution__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, uint jarg7, uint jarg8, uint jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_3")]
   public static extern global::System.IntPtr Convolution__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, uint jarg7, uint jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_4")]
   public static extern global::System.IntPtr Convolution__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, uint jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_5")]
   public static extern global::System.IntPtr Convolution__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_6")]
   public static extern global::System.IntPtr Convolution__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_7")]
   public static extern global::System.IntPtr Convolution__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_8")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_8")]
   public static extern global::System.IntPtr Convolution__SWIG_8(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_9")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Convolution__SWIG_9")]
   public static extern global::System.IntPtr Convolution__SWIG_9(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_0")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, global::System.Runtime.InteropServices.HandleRef jarg7, uint jarg8, uint jarg9, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg10);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_1")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, global::System.Runtime.InteropServices.HandleRef jarg7, uint jarg8, uint jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_2")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, global::System.Runtime.InteropServices.HandleRef jarg7, uint jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_3")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, global::System.Runtime.InteropServices.HandleRef jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_4")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_5")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_6")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_7")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_8")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_8")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_8(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_9")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_9")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_9(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, global::System.Runtime.InteropServices.HandleRef jarg7, global::System.Runtime.InteropServices.HandleRef jarg8, uint jarg9, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg10);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_10")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ConvolutionTranspose__SWIG_10")]
   public static extern global::System.IntPtr ConvolutionTranspose__SWIG_10(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, global::System.Runtime.InteropServices.HandleRef jarg7, global::System.Runtime.InteropServices.HandleRef jarg8, uint jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ROIPooling")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ROIPooling")]
   public static extern global::System.IntPtr ROIPooling(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, int jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, double jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_0")]
   public static extern global::System.IntPtr Pooling__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, bool jarg6, bool jarg7, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_1")]
   public static extern global::System.IntPtr Pooling__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, bool jarg6, bool jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_2")]
   public static extern global::System.IntPtr Pooling__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, bool jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_3")]
   public static extern global::System.IntPtr Pooling__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_4")]
   public static extern global::System.IntPtr Pooling__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_5")]
   public static extern global::System.IntPtr Pooling__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_6")]
   public static extern global::System.IntPtr Pooling__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, bool jarg8, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_7")]
   public static extern global::System.IntPtr Pooling__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, bool jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_8")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_8")]
   public static extern global::System.IntPtr Pooling__SWIG_8(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_9")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Pooling__SWIG_9")]
   public static extern global::System.IntPtr Pooling__SWIG_9(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Unpooling__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Unpooling__SWIG_0")]
   public static extern global::System.IntPtr Unpooling__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, int jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Unpooling__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Unpooling__SWIG_1")]
   public static extern global::System.IntPtr Unpooling__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, int jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Unpooling__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Unpooling__SWIG_2")]
   public static extern global::System.IntPtr Unpooling__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, int jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Unpooling__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Unpooling__SWIG_3")]
   public static extern global::System.IntPtr Unpooling__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, int jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_0")]
   public static extern global::System.IntPtr BatchNormalization__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, double jarg8, double jarg9, double jarg10, bool jarg11, bool jarg12, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg13);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_1")]
   public static extern global::System.IntPtr BatchNormalization__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, double jarg8, double jarg9, double jarg10, bool jarg11, bool jarg12);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_2")]
   public static extern global::System.IntPtr BatchNormalization__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, double jarg8, double jarg9, double jarg10, bool jarg11);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_3")]
   public static extern global::System.IntPtr BatchNormalization__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, double jarg8, double jarg9, double jarg10);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_4")]
   public static extern global::System.IntPtr BatchNormalization__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, double jarg8, double jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_5")]
   public static extern global::System.IntPtr BatchNormalization__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7, double jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_BatchNormalization__SWIG_6")]
   public static extern global::System.IntPtr BatchNormalization__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6, bool jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LocalResponseNormalization__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LocalResponseNormalization__SWIG_0")]
   public static extern global::System.IntPtr LocalResponseNormalization__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, double jarg3, double jarg4, double jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LocalResponseNormalization__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LocalResponseNormalization__SWIG_1")]
   public static extern global::System.IntPtr LocalResponseNormalization__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, double jarg3, double jarg4, double jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OptimizedRNNStack__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OptimizedRNNStack__SWIG_0")]
   public static extern global::System.IntPtr OptimizedRNNStack__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, uint jarg4, bool jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OptimizedRNNStack__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OptimizedRNNStack__SWIG_1")]
   public static extern global::System.IntPtr OptimizedRNNStack__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, uint jarg4, bool jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OptimizedRNNStack__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OptimizedRNNStack__SWIG_2")]
   public static extern global::System.IntPtr OptimizedRNNStack__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, uint jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_OptimizedRNNStack__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_OptimizedRNNStack__SWIG_3")]
   public static extern global::System.IntPtr OptimizedRNNStack__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Clip__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Clip__SWIG_0")]
   public static extern global::System.IntPtr Clip__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Clip__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Clip__SWIG_1")]
   public static extern global::System.IntPtr Clip__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementSelect__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementSelect__SWIG_0")]
   public static extern global::System.IntPtr ElementSelect__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ElementSelect__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ElementSelect__SWIG_1")]
   public static extern global::System.IntPtr ElementSelect__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Splice__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Splice__SWIG_0")]
   public static extern global::System.IntPtr Splice__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Splice__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Splice__SWIG_1")]
   public static extern global::System.IntPtr Splice__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Combine__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Combine__SWIG_0")]
   public static extern global::System.IntPtr Combine__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Combine__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Combine__SWIG_1")]
   public static extern global::System.IntPtr Combine__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Mean__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Mean__SWIG_0")]
   public static extern global::System.IntPtr Mean__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Mean__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Mean__SWIG_1")]
   public static extern global::System.IntPtr Mean__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Sum__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Sum__SWIG_0")]
   public static extern global::System.IntPtr Sum__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Sum__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Sum__SWIG_1")]
   public static extern global::System.IntPtr Sum__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Alias__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Alias__SWIG_0")]
   public static extern global::System.IntPtr Alias__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Alias__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Alias__SWIG_1")]
   public static extern global::System.IntPtr Alias__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StopGradient__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StopGradient__SWIG_0")]
   public static extern global::System.IntPtr StopGradient__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StopGradient__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StopGradient__SWIG_1")]
   public static extern global::System.IntPtr StopGradient__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Assign__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Assign__SWIG_0")]
   public static extern global::System.IntPtr Assign__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Assign__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Assign__SWIG_1")]
   public static extern global::System.IntPtr Assign__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AsComposite__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AsComposite__SWIG_0")]
   public static extern global::System.IntPtr AsComposite__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AsComposite__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AsComposite__SWIG_1")]
   public static extern global::System.IntPtr AsComposite__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ELU__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ELU__SWIG_0")]
   public static extern global::System.IntPtr ELU__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ELU__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ELU__SWIG_1")]
   public static extern global::System.IntPtr ELU__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ELU__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ELU__SWIG_2")]
   public static extern global::System.IntPtr ELU__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ELU__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ELU__SWIG_3")]
   public static extern global::System.IntPtr ELU__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SELU__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SELU__SWIG_0")]
   public static extern global::System.IntPtr SELU__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SELU__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SELU__SWIG_1")]
   public static extern global::System.IntPtr SELU__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SELU__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SELU__SWIG_2")]
   public static extern global::System.IntPtr SELU__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SELU__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SELU__SWIG_3")]
   public static extern global::System.IntPtr SELU__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LeakyReLU__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LeakyReLU__SWIG_0")]
   public static extern global::System.IntPtr LeakyReLU__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LeakyReLU__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LeakyReLU__SWIG_1")]
   public static extern global::System.IntPtr LeakyReLU__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PReLU__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PReLU__SWIG_0")]
   public static extern global::System.IntPtr PReLU__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_PReLU__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_PReLU__SWIG_1")]
   public static extern global::System.IntPtr PReLU__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Softplus__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Softplus__SWIG_0")]
   public static extern global::System.IntPtr Softplus__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Softplus__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Softplus__SWIG_1")]
   public static extern global::System.IntPtr Softplus__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Softsign__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Softsign__SWIG_0")]
   public static extern global::System.IntPtr Softsign__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Softsign__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Softsign__SWIG_1")]
   public static extern global::System.IntPtr Softsign__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Argmax__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Argmax__SWIG_0")]
   public static extern global::System.IntPtr Argmax__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Argmax__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Argmax__SWIG_1")]
   public static extern global::System.IntPtr Argmax__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Argmin__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Argmin__SWIG_0")]
   public static extern global::System.IntPtr Argmin__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Argmin__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Argmin__SWIG_1")]
   public static extern global::System.IntPtr Argmin__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StraightThrough__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StraightThrough__SWIG_0")]
   public static extern global::System.IntPtr StraightThrough__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StraightThrough__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StraightThrough__SWIG_1")]
   public static extern global::System.IntPtr StraightThrough__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ToSequence__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ToSequence__SWIG_0")]
   public static extern global::System.IntPtr ToSequence__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ToSequence__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ToSequence__SWIG_1")]
   public static extern global::System.IntPtr ToSequence__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ToSequence__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ToSequence__SWIG_2")]
   public static extern global::System.IntPtr ToSequence__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ToSequence__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ToSequence__SWIG_3")]
   public static extern global::System.IntPtr ToSequence__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ToSequenceLike__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ToSequenceLike__SWIG_0")]
   public static extern global::System.IntPtr ToSequenceLike__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ToSequenceLike__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ToSequenceLike__SWIG_1")]
   public static extern global::System.IntPtr ToSequenceLike__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReconcileDynamicAxes__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReconcileDynamicAxes__SWIG_0")]
   public static extern global::System.IntPtr ReconcileDynamicAxes__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReconcileDynamicAxes__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReconcileDynamicAxes__SWIG_1")]
   public static extern global::System.IntPtr ReconcileDynamicAxes__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CustomProxyOp__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CustomProxyOp__SWIG_0")]
   public static extern global::System.IntPtr CustomProxyOp__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, int jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CustomProxyOp__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CustomProxyOp__SWIG_1")]
   public static extern global::System.IntPtr CustomProxyOp__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, int jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceIsFirst__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceIsFirst__SWIG_0")]
   public static extern global::System.IntPtr SequenceIsFirst__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceIsFirst__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceIsFirst__SWIG_1")]
   public static extern global::System.IntPtr SequenceIsFirst__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceIsLast__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceIsLast__SWIG_0")]
   public static extern global::System.IntPtr SequenceIsLast__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceIsLast__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceIsLast__SWIG_1")]
   public static extern global::System.IntPtr SequenceIsLast__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceSlice__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceSlice__SWIG_0")]
   public static extern global::System.IntPtr SequenceSlice__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceSlice__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceSlice__SWIG_1")]
   public static extern global::System.IntPtr SequenceSlice__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceReduceSum__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceReduceSum__SWIG_0")]
   public static extern global::System.IntPtr SequenceReduceSum__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceReduceSum__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceReduceSum__SWIG_1")]
   public static extern global::System.IntPtr SequenceReduceSum__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceReduceMax__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceReduceMax__SWIG_0")]
   public static extern global::System.IntPtr SequenceReduceMax__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceReduceMax__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceReduceMax__SWIG_1")]
   public static extern global::System.IntPtr SequenceReduceMax__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceSoftmax__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceSoftmax__SWIG_0")]
   public static extern global::System.IntPtr SequenceSoftmax__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceSoftmax__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceSoftmax__SWIG_1")]
   public static extern global::System.IntPtr SequenceSoftmax__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceFirst__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceFirst__SWIG_0")]
   public static extern global::System.IntPtr SequenceFirst__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceFirst__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceFirst__SWIG_1")]
   public static extern global::System.IntPtr SequenceFirst__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceLast__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceLast__SWIG_0")]
   public static extern global::System.IntPtr SequenceLast__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceLast__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceLast__SWIG_1")]
   public static extern global::System.IntPtr SequenceLast__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceWhere__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceWhere__SWIG_0")]
   public static extern global::System.IntPtr SequenceWhere__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceWhere__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceWhere__SWIG_1")]
   public static extern global::System.IntPtr SequenceWhere__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceGather__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceGather__SWIG_0")]
   public static extern global::System.IntPtr SequenceGather__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceGather__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceGather__SWIG_1")]
   public static extern global::System.IntPtr SequenceGather__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceGather__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceGather__SWIG_2")]
   public static extern global::System.IntPtr SequenceGather__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceGather__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceGather__SWIG_3")]
   public static extern global::System.IntPtr SequenceGather__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceScatter__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceScatter__SWIG_0")]
   public static extern global::System.IntPtr SequenceScatter__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceScatter__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceScatter__SWIG_1")]
   public static extern global::System.IntPtr SequenceScatter__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceScatter__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceScatter__SWIG_2")]
   public static extern global::System.IntPtr SequenceScatter__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceScatter__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceScatter__SWIG_3")]
   public static extern global::System.IntPtr SequenceScatter__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceBroadcastAs__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceBroadcastAs__SWIG_0")]
   public static extern global::System.IntPtr SequenceBroadcastAs__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceBroadcastAs__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceBroadcastAs__SWIG_1")]
   public static extern global::System.IntPtr SequenceBroadcastAs__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceUnpack__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceUnpack__SWIG_0")]
   public static extern global::System.IntPtr SequenceUnpack__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SequenceUnpack__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SequenceUnpack__SWIG_1")]
   public static extern global::System.IntPtr SequenceUnpack__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MomentumFromTimeConstant")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MomentumFromTimeConstant")]
   public static extern double MomentumFromTimeConstant(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_0")]
   public static extern global::System.IntPtr MomentumAsTimeConstantSchedule__SWIG_0(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_1")]
   public static extern global::System.IntPtr MomentumAsTimeConstantSchedule__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_2")]
   public static extern global::System.IntPtr MomentumAsTimeConstantSchedule__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_3")]
   public static extern global::System.IntPtr MomentumAsTimeConstantSchedule__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_4")]
   public static extern global::System.IntPtr MomentumAsTimeConstantSchedule__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MomentumAsTimeConstantSchedule__SWIG_5")]
   public static extern global::System.IntPtr MomentumAsTimeConstantSchedule__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_l1RegularizationWeight_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_l1RegularizationWeight_set")]
   public static extern void AdditionalLearningOptions_l1RegularizationWeight_set(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_l1RegularizationWeight_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_l1RegularizationWeight_get")]
   public static extern double AdditionalLearningOptions_l1RegularizationWeight_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_l2RegularizationWeight_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_l2RegularizationWeight_set")]
   public static extern void AdditionalLearningOptions_l2RegularizationWeight_set(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_l2RegularizationWeight_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_l2RegularizationWeight_get")]
   public static extern double AdditionalLearningOptions_l2RegularizationWeight_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_gradientClippingThresholdPerSample_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_gradientClippingThresholdPerSample_set")]
   public static extern void AdditionalLearningOptions_gradientClippingThresholdPerSample_set(global::System.Runtime.InteropServices.HandleRef jarg1, double jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_gradientClippingThresholdPerSample_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_gradientClippingThresholdPerSample_get")]
   public static extern double AdditionalLearningOptions_gradientClippingThresholdPerSample_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_gradientClippingWithTruncation_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_gradientClippingWithTruncation_set")]
   public static extern void AdditionalLearningOptions_gradientClippingWithTruncation_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_gradientClippingWithTruncation_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_gradientClippingWithTruncation_get")]
   public static extern bool AdditionalLearningOptions_gradientClippingWithTruncation_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_dictOptions_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_dictOptions_set")]
   public static extern void AdditionalLearningOptions_dictOptions_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_dictOptions_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdditionalLearningOptions_dictOptions_get")]
   public static extern global::System.IntPtr AdditionalLearningOptions_dictOptions_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_AdditionalLearningOptions")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_AdditionalLearningOptions")]
   public static extern global::System.IntPtr new_AdditionalLearningOptions();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_AdditionalLearningOptions")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_AdditionalLearningOptions")]
   public static extern void delete_AdditionalLearningOptions(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_MinibatchSizeKey_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_MinibatchSizeKey_get")]
   public static extern string Learner_MinibatchSizeKey_get();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_IgnoredMinibatchSize_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_IgnoredMinibatchSize_get")]
   public static extern uint Learner_IgnoredMinibatchSize_get();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_Update")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_Update")]
   public static extern bool Learner_Update(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_Parameters")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_Parameters")]
   public static extern global::System.IntPtr Learner_Parameters(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_CreateCheckpoint")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_CreateCheckpoint")]
   public static extern global::System.IntPtr Learner_CreateCheckpoint(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_RestoreFromCheckpoint")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_RestoreFromCheckpoint")]
   public static extern void Learner_RestoreFromCheckpoint(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_Learner")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_Learner")]
   public static extern void delete_Learner(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_CurrentVersion")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_CurrentVersion")]
   public static extern uint Learner_CurrentVersion(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_ResetLearningRate")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_ResetLearningRate")]
   public static extern void Learner_ResetLearningRate(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_ResetSmoothedGradients")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_ResetSmoothedGradients")]
   public static extern void Learner_ResetSmoothedGradients(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_SetNeedToUpdateMasterParameter")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_SetNeedToUpdateMasterParameter")]
   public static extern void Learner_SetNeedToUpdateMasterParameter(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_LearningRate")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_LearningRate")]
   public static extern double Learner_LearningRate(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_TotalNumberOfSamplesSeen")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_TotalNumberOfSamplesSeen")]
   public static extern uint Learner_TotalNumberOfSamplesSeen(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_TotalNumberOfMinibatchesSeen")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_TotalNumberOfMinibatchesSeen")]
   public static extern uint Learner_TotalNumberOfMinibatchesSeen(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_TotalNumberOfSweepsSeen")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_TotalNumberOfSweepsSeen")]
   public static extern uint Learner_TotalNumberOfSweepsSeen(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_AddProgressWriters")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_AddProgressWriters")]
   public static extern void Learner_AddProgressWriters(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_SetMinibatchSize")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_SetMinibatchSize")]
   public static extern void Learner_SetMinibatchSize(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_GetMinibatchSize")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_GetMinibatchSize")]
   public static extern uint Learner_GetMinibatchSize(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_SetLearningRateSchedule")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_SetLearningRateSchedule")]
   public static extern void Learner_SetLearningRateSchedule(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_GetLearningRateSchedule")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_GetLearningRateSchedule")]
   public static extern global::System.IntPtr Learner_GetLearningRateSchedule(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Learner_IsCompatibleMode")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Learner_IsCompatibleMode")]
   public static extern bool Learner_IsCompatibleMode(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SGDLearner__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SGDLearner__SWIG_0")]
   public static extern global::System.IntPtr SGDLearner__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SGDLearner__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SGDLearner__SWIG_1")]
   public static extern global::System.IntPtr SGDLearner__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MomentumSGDLearner__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MomentumSGDLearner__SWIG_0")]
   public static extern global::System.IntPtr MomentumSGDLearner__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MomentumSGDLearner__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MomentumSGDLearner__SWIG_1")]
   public static extern global::System.IntPtr MomentumSGDLearner__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MomentumSGDLearner__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MomentumSGDLearner__SWIG_2")]
   public static extern global::System.IntPtr MomentumSGDLearner__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FSAdaGradLearner__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FSAdaGradLearner__SWIG_0")]
   public static extern global::System.IntPtr FSAdaGradLearner__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FSAdaGradLearner__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FSAdaGradLearner__SWIG_1")]
   public static extern global::System.IntPtr FSAdaGradLearner__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FSAdaGradLearner__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FSAdaGradLearner__SWIG_2")]
   public static extern global::System.IntPtr FSAdaGradLearner__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_FSAdaGradLearner__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_FSAdaGradLearner__SWIG_3")]
   public static extern global::System.IntPtr FSAdaGradLearner__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_0")]
   public static extern global::System.IntPtr AdamLearner__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, double jarg6, bool jarg7, global::System.Runtime.InteropServices.HandleRef jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_1")]
   public static extern global::System.IntPtr AdamLearner__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, double jarg6, bool jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_2")]
   public static extern global::System.IntPtr AdamLearner__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, double jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_3")]
   public static extern global::System.IntPtr AdamLearner__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_4")]
   public static extern global::System.IntPtr AdamLearner__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdamLearner__SWIG_5")]
   public static extern global::System.IntPtr AdamLearner__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdaGradLearner__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdaGradLearner__SWIG_0")]
   public static extern global::System.IntPtr AdaGradLearner__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdaGradLearner__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdaGradLearner__SWIG_1")]
   public static extern global::System.IntPtr AdaGradLearner__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdaGradLearner__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdaGradLearner__SWIG_2")]
   public static extern global::System.IntPtr AdaGradLearner__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_RMSPropLearner__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_RMSPropLearner__SWIG_0")]
   public static extern global::System.IntPtr RMSPropLearner__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, double jarg3, double jarg4, double jarg5, double jarg6, double jarg7, bool jarg8, global::System.Runtime.InteropServices.HandleRef jarg9);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_RMSPropLearner__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_RMSPropLearner__SWIG_1")]
   public static extern global::System.IntPtr RMSPropLearner__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, double jarg3, double jarg4, double jarg5, double jarg6, double jarg7, bool jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_RMSPropLearner__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_RMSPropLearner__SWIG_2")]
   public static extern global::System.IntPtr RMSPropLearner__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, double jarg3, double jarg4, double jarg5, double jarg6, double jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdaDeltaLearner__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdaDeltaLearner__SWIG_0")]
   public static extern global::System.IntPtr AdaDeltaLearner__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, double jarg3, double jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdaDeltaLearner__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdaDeltaLearner__SWIG_1")]
   public static extern global::System.IntPtr AdaDeltaLearner__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, double jarg3, double jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdaDeltaLearner__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdaDeltaLearner__SWIG_2")]
   public static extern global::System.IntPtr AdaDeltaLearner__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_AdaDeltaLearner__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_AdaDeltaLearner__SWIG_3")]
   public static extern global::System.IntPtr AdaDeltaLearner__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_0")]
   public static extern double Evaluator_TestMinibatch__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_1")]
   public static extern double Evaluator_TestMinibatch__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_2")]
   public static extern double Evaluator_TestMinibatch__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_3")]
   public static extern double Evaluator_TestMinibatch__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_4")]
   public static extern double Evaluator_TestMinibatch__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_5")]
   public static extern double Evaluator_TestMinibatch__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_6")]
   public static extern double Evaluator_TestMinibatch__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_7")]
   public static extern double Evaluator_TestMinibatch__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_8")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_8")]
   public static extern double Evaluator_TestMinibatch__SWIG_8(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_9")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_9")]
   public static extern double Evaluator_TestMinibatch__SWIG_9(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_10")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_10")]
   public static extern double Evaluator_TestMinibatch__SWIG_10(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_11")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_TestMinibatch__SWIG_11")]
   public static extern double Evaluator_TestMinibatch__SWIG_11(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_EvaluationFunction")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_EvaluationFunction")]
   public static extern global::System.IntPtr Evaluator_EvaluationFunction(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_SummarizeTestProgress")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_SummarizeTestProgress")]
   public static extern void Evaluator_SummarizeTestProgress(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Evaluator_PrintNodeTiming")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Evaluator_PrintNodeTiming")]
   public static extern void Evaluator_PrintNodeTiming(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_Evaluator")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_Evaluator")]
   public static extern void delete_Evaluator(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CreateEvaluator__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CreateEvaluator__SWIG_0")]
   public static extern global::System.IntPtr CreateEvaluator__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CreateEvaluator__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CreateEvaluator__SWIG_1")]
   public static extern global::System.IntPtr CreateEvaluator__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_0")]
   public static extern bool Trainer__TrainMinibatch__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_1")]
   public static extern bool Trainer__TrainMinibatch__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_2")]
   public static extern bool Trainer__TrainMinibatch__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_3")]
   public static extern bool Trainer__TrainMinibatch__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_4")]
   public static extern bool Trainer__TrainMinibatch__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_5")]
   public static extern bool Trainer__TrainMinibatch__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_6")]
   public static extern bool Trainer__TrainMinibatch__SWIG_6(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_7")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer__TrainMinibatch__SWIG_7")]
   public static extern bool Trainer__TrainMinibatch__SWIG_7(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, bool jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_SaveCheckpoint__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_SaveCheckpoint__SWIG_0")]
   public static extern void Trainer_SaveCheckpoint__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_SaveCheckpoint__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_SaveCheckpoint__SWIG_1")]
   public static extern void Trainer_SaveCheckpoint__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_RestoreFromCheckpoint")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_RestoreFromCheckpoint")]
   public static extern global::System.IntPtr Trainer_RestoreFromCheckpoint(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_Model")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_Model")]
   public static extern global::System.IntPtr Trainer_Model(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_LossFunction")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_LossFunction")]
   public static extern global::System.IntPtr Trainer_LossFunction(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_PreviousMinibatchLossAverage")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_PreviousMinibatchLossAverage")]
   public static extern double Trainer_PreviousMinibatchLossAverage(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_PreviousMinibatchEvaluationAverage")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_PreviousMinibatchEvaluationAverage")]
   public static extern double Trainer_PreviousMinibatchEvaluationAverage(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_PreviousMinibatchSampleCount")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_PreviousMinibatchSampleCount")]
   public static extern uint Trainer_PreviousMinibatchSampleCount(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_TotalNumberOfSamplesSeen")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_TotalNumberOfSamplesSeen")]
   public static extern uint Trainer_TotalNumberOfSamplesSeen(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_TotalNumberOfUnitsSeen__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_TotalNumberOfUnitsSeen__SWIG_0")]
   public static extern uint Trainer_TotalNumberOfUnitsSeen__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_TotalNumberOfUnitsSeen__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_TotalNumberOfUnitsSeen__SWIG_1")]
   public static extern uint Trainer_TotalNumberOfUnitsSeen__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_SummarizeTrainingProgress")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_SummarizeTrainingProgress")]
   public static extern void Trainer_SummarizeTrainingProgress(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_PrintNodeTiming")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_PrintNodeTiming")]
   public static extern void Trainer_PrintNodeTiming(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_Trainer")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_Trainer")]
   public static extern void delete_Trainer(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CreateTrainer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CreateTrainer__SWIG_0")]
   public static extern global::System.IntPtr CreateTrainer__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CreateTrainer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CreateTrainer__SWIG_1")]
   public static extern global::System.IntPtr CreateTrainer__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CreateTrainer__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CreateTrainer__SWIG_2")]
   public static extern global::System.IntPtr CreateTrainer__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CreateTrainer__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CreateTrainer__SWIG_3")]
   public static extern global::System.IntPtr CreateTrainer__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_MinibatchData__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_MinibatchData__SWIG_0")]
   public static extern global::System.IntPtr new_MinibatchData__SWIG_0();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_MinibatchData__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_MinibatchData__SWIG_1")]
   public static extern global::System.IntPtr new_MinibatchData__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_MinibatchData__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_MinibatchData__SWIG_2")]
   public static extern global::System.IntPtr new_MinibatchData__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_MinibatchData__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_MinibatchData__SWIG_3")]
   public static extern global::System.IntPtr new_MinibatchData__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_MinibatchData__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_MinibatchData__SWIG_4")]
   public static extern global::System.IntPtr new_MinibatchData__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, uint jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchData_AsString")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchData_AsString")]
   public static extern string MinibatchData_AsString(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchData_data_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchData_data_set")]
   public static extern void MinibatchData_data_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchData_data_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchData_data_get")]
   public static extern global::System.IntPtr MinibatchData_data_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchData_numberOfSequences_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchData_numberOfSequences_set")]
   public static extern void MinibatchData_numberOfSequences_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchData_numberOfSequences_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchData_numberOfSequences_get")]
   public static extern uint MinibatchData_numberOfSequences_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchData_numberOfSamples_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchData_numberOfSamples_set")]
   public static extern void MinibatchData_numberOfSamples_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchData_numberOfSamples_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchData_numberOfSamples_get")]
   public static extern uint MinibatchData_numberOfSamples_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchData_sweepEnd_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchData_sweepEnd_set")]
   public static extern void MinibatchData_sweepEnd_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchData_sweepEnd_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchData_sweepEnd_get")]
   public static extern bool MinibatchData_sweepEnd_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_MinibatchData")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_MinibatchData")]
   public static extern void delete_MinibatchData(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_0")]
   public static extern global::System.IntPtr MinibatchSource_GetNextMinibatch__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, uint jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_1")]
   public static extern global::System.IntPtr MinibatchSource_GetNextMinibatch__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_2")]
   public static extern global::System.IntPtr MinibatchSource_GetNextMinibatch__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, uint jarg3, uint jarg4, uint jarg5, global::System.Runtime.InteropServices.HandleRef jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_3")]
   public static extern global::System.IntPtr MinibatchSource_GetNextMinibatch__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, uint jarg3, uint jarg4, uint jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_MinibatchSource")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_MinibatchSource")]
   public static extern void delete_MinibatchSource(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetCheckpointState")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetCheckpointState")]
   public static extern global::System.IntPtr MinibatchSource_GetCheckpointState(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_RestoreFromCheckpoint")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_RestoreFromCheckpoint")]
   public static extern void MinibatchSource_RestoreFromCheckpoint(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_IsInfinite")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_IsInfinite")]
   public static extern bool MinibatchSource_IsInfinite(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_StreamInfo__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_StreamInfo__SWIG_0")]
   public static extern global::System.IntPtr MinibatchSource_StreamInfo__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_StreamInfo__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_StreamInfo__SWIG_1")]
   public static extern global::System.IntPtr MinibatchSource_StreamInfo__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_4")]
   public static extern global::System.IntPtr MinibatchSource_GetNextMinibatch__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetNextMinibatch__SWIG_5")]
   public static extern global::System.IntPtr MinibatchSource_GetNextMinibatch__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_0")]
   public static extern global::System.IntPtr MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, ulong jarg3, bool jarg4, ulong jarg5, bool jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_1")]
   public static extern global::System.IntPtr MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, ulong jarg3, bool jarg4, ulong jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_2")]
   public static extern global::System.IntPtr MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_2([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, ulong jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_3")]
   public static extern global::System.IntPtr MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_3([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, ulong jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_4")]
   public static extern global::System.IntPtr MinibatchSource_TextFormatMinibatchSourceInternal__SWIG_4([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetFullDataSweep")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetFullDataSweep")]
   public static extern ulong MinibatchSource_GetFullDataSweep();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetInfinitelyRepeat")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetInfinitelyRepeat")]
   public static extern ulong MinibatchSource_GetInfinitelyRepeat();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetDefaultRandomizationWindowInChunks")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSource_GetDefaultRandomizationWindowInChunks")]
   public static extern ulong MinibatchSource_GetDefaultRandomizationWindowInChunks();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_MinibatchSourceConfig__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_MinibatchSourceConfig__SWIG_0")]
   public static extern global::System.IntPtr new_MinibatchSourceConfig__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_MinibatchSourceConfig__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_MinibatchSourceConfig__SWIG_1")]
   public static extern global::System.IntPtr new_MinibatchSourceConfig__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxSamples_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxSamples_set")]
   public static extern void MinibatchSourceConfig_maxSamples_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxSamples_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxSamples_get")]
   public static extern uint MinibatchSourceConfig_maxSamples_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxSweeps_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxSweeps_set")]
   public static extern void MinibatchSourceConfig_maxSweeps_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxSweeps_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxSweeps_get")]
   public static extern uint MinibatchSourceConfig_maxSweeps_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationWindowInChunks_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationWindowInChunks_set")]
   public static extern void MinibatchSourceConfig_randomizationWindowInChunks_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationWindowInChunks_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationWindowInChunks_get")]
   public static extern uint MinibatchSourceConfig_randomizationWindowInChunks_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationWindowInSamples_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationWindowInSamples_set")]
   public static extern void MinibatchSourceConfig_randomizationWindowInSamples_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationWindowInSamples_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationWindowInSamples_get")]
   public static extern uint MinibatchSourceConfig_randomizationWindowInSamples_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationSeed_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationSeed_set")]
   public static extern void MinibatchSourceConfig_randomizationSeed_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationSeed_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_randomizationSeed_get")]
   public static extern uint MinibatchSourceConfig_randomizationSeed_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_traceLevel_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_traceLevel_set")]
   public static extern void MinibatchSourceConfig_traceLevel_set(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_traceLevel_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_traceLevel_get")]
   public static extern int MinibatchSourceConfig_traceLevel_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_truncationLength_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_truncationLength_set")]
   public static extern void MinibatchSourceConfig_truncationLength_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_truncationLength_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_truncationLength_get")]
   public static extern uint MinibatchSourceConfig_truncationLength_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_isFrameModeEnabled_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_isFrameModeEnabled_set")]
   public static extern void MinibatchSourceConfig_isFrameModeEnabled_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_isFrameModeEnabled_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_isFrameModeEnabled_get")]
   public static extern bool MinibatchSourceConfig_isFrameModeEnabled_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_deserializers_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_deserializers_set")]
   public static extern void MinibatchSourceConfig_deserializers_set(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_deserializers_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_deserializers_get")]
   public static extern global::System.IntPtr MinibatchSourceConfig_deserializers_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxErrors_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxErrors_set")]
   public static extern void MinibatchSourceConfig_maxErrors_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxErrors_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_maxErrors_get")]
   public static extern uint MinibatchSourceConfig_maxErrors_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_GetMaxSamples")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_GetMaxSamples")]
   public static extern ulong MinibatchSourceConfig_GetMaxSamples(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_SetMaxSamples")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_SetMaxSamples")]
   public static extern void MinibatchSourceConfig_SetMaxSamples(global::System.Runtime.InteropServices.HandleRef jarg1, ulong jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_GetMaxSweeps")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_GetMaxSweeps")]
   public static extern ulong MinibatchSourceConfig_GetMaxSweeps(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_SetMaxSweeps")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_MinibatchSourceConfig_SetMaxSweeps")]
   public static extern void MinibatchSourceConfig_SetMaxSweeps(global::System.Runtime.InteropServices.HandleRef jarg1, ulong jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_MinibatchSourceConfig")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_MinibatchSourceConfig")]
   public static extern void delete_MinibatchSourceConfig(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CreateCompositeMinibatchSource")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CreateCompositeMinibatchSource")]
   public static extern global::System.IntPtr CreateCompositeMinibatchSource(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StreamConfiguration__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StreamConfiguration__SWIG_0")]
   public static extern global::System.IntPtr new_StreamConfiguration__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, uint jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StreamConfiguration__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StreamConfiguration__SWIG_1")]
   public static extern global::System.IntPtr new_StreamConfiguration__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, uint jarg2, bool jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StreamConfiguration__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StreamConfiguration__SWIG_2")]
   public static extern global::System.IntPtr new_StreamConfiguration__SWIG_2([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, uint jarg2, bool jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_StreamConfiguration__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_StreamConfiguration__SWIG_3")]
   public static extern global::System.IntPtr new_StreamConfiguration__SWIG_3([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_streamName_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_streamName_set")]
   public static extern void StreamConfiguration_m_streamName_set(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_streamName_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_streamName_get")]
   public static extern string StreamConfiguration_m_streamName_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_dim_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_dim_set")]
   public static extern void StreamConfiguration_m_dim_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_dim_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_dim_get")]
   public static extern uint StreamConfiguration_m_dim_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_isSparse_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_isSparse_set")]
   public static extern void StreamConfiguration_m_isSparse_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_isSparse_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_isSparse_get")]
   public static extern bool StreamConfiguration_m_isSparse_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_streamAlias_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_streamAlias_set")]
   public static extern void StreamConfiguration_m_streamAlias_set(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_streamAlias_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_streamAlias_get")]
   public static extern string StreamConfiguration_m_streamAlias_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_definesMbSize_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_definesMbSize_set")]
   public static extern void StreamConfiguration_m_definesMbSize_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_definesMbSize_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_StreamConfiguration_m_definesMbSize_get")]
   public static extern bool StreamConfiguration_m_definesMbSize_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_StreamConfiguration")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_StreamConfiguration")]
   public static extern void delete_StreamConfiguration(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfiguration__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfiguration__SWIG_0")]
   public static extern global::System.IntPtr new_HTKFeatureConfiguration__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, uint jarg3, uint jarg4, uint jarg5, bool jarg6, bool jarg7, uint jarg8);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfiguration__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfiguration__SWIG_1")]
   public static extern global::System.IntPtr new_HTKFeatureConfiguration__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, uint jarg3, uint jarg4, uint jarg5, bool jarg6, bool jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfiguration__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_HTKFeatureConfiguration__SWIG_2")]
   public static extern global::System.IntPtr new_HTKFeatureConfiguration__SWIG_2([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, uint jarg3, uint jarg4, uint jarg5, bool jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_streamName_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_streamName_set")]
   public static extern void HTKFeatureConfiguration_m_streamName_set(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_streamName_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_streamName_get")]
   public static extern string HTKFeatureConfiguration_m_streamName_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_scp_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_scp_set")]
   public static extern void HTKFeatureConfiguration_m_scp_set(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_scp_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_scp_get")]
   public static extern string HTKFeatureConfiguration_m_scp_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_dim_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_dim_set")]
   public static extern void HTKFeatureConfiguration_m_dim_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_dim_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_dim_get")]
   public static extern uint HTKFeatureConfiguration_m_dim_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_left_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_left_set")]
   public static extern void HTKFeatureConfiguration_m_left_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_left_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_left_get")]
   public static extern uint HTKFeatureConfiguration_m_left_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_right_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_right_set")]
   public static extern void HTKFeatureConfiguration_m_right_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_right_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_right_get")]
   public static extern uint HTKFeatureConfiguration_m_right_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_broadcast_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_broadcast_set")]
   public static extern void HTKFeatureConfiguration_m_broadcast_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_broadcast_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_broadcast_get")]
   public static extern bool HTKFeatureConfiguration_m_broadcast_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_definesMbSize_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_definesMbSize_set")]
   public static extern void HTKFeatureConfiguration_m_definesMbSize_set(global::System.Runtime.InteropServices.HandleRef jarg1, bool jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_definesMbSize_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_definesMbSize_get")]
   public static extern bool HTKFeatureConfiguration_m_definesMbSize_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_maxSequenceLength_set")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_maxSequenceLength_set")]
   public static extern void HTKFeatureConfiguration_m_maxSequenceLength_set(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_maxSequenceLength_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureConfiguration_m_maxSequenceLength_get")]
   public static extern uint HTKFeatureConfiguration_m_maxSequenceLength_get(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_HTKFeatureConfiguration")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_HTKFeatureConfiguration")]
   public static extern void delete_HTKFeatureConfiguration(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_0")]
   public static extern global::System.IntPtr ReaderCrop__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_1")]
   public static extern global::System.IntPtr ReaderCrop__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_2")]
   public static extern global::System.IntPtr ReaderCrop__SWIG_2([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_3")]
   public static extern global::System.IntPtr ReaderCrop__SWIG_3([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_4")]
   public static extern global::System.IntPtr ReaderCrop__SWIG_4([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_5")]
   public static extern global::System.IntPtr ReaderCrop__SWIG_5([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_6")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderCrop__SWIG_6")]
   public static extern global::System.IntPtr ReaderCrop__SWIG_6();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderScale__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderScale__SWIG_0")]
   public static extern global::System.IntPtr ReaderScale__SWIG_0(int jarg1, int jarg2, int jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5, int jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderScale__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderScale__SWIG_1")]
   public static extern global::System.IntPtr ReaderScale__SWIG_1(int jarg1, int jarg2, int jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderScale__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderScale__SWIG_2")]
   public static extern global::System.IntPtr ReaderScale__SWIG_2(int jarg1, int jarg2, int jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderScale__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderScale__SWIG_3")]
   public static extern global::System.IntPtr ReaderScale__SWIG_3(int jarg1, int jarg2, int jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderMean")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderMean")]
   public static extern global::System.IntPtr ReaderMean([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderColor__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderColor__SWIG_0")]
   public static extern global::System.IntPtr ReaderColor__SWIG_0(float jarg1, float jarg2, float jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderColor__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderColor__SWIG_1")]
   public static extern global::System.IntPtr ReaderColor__SWIG_1(float jarg1, float jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderColor__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderColor__SWIG_2")]
   public static extern global::System.IntPtr ReaderColor__SWIG_2(float jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ReaderColor__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ReaderColor__SWIG_3")]
   public static extern global::System.IntPtr ReaderColor__SWIG_3();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ImageDeserializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ImageDeserializer__SWIG_0")]
   public static extern global::System.IntPtr ImageDeserializer__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ImageDeserializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ImageDeserializer__SWIG_1")]
   public static extern global::System.IntPtr ImageDeserializer__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Base64ImageDeserializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Base64ImageDeserializer__SWIG_0")]
   public static extern global::System.IntPtr Base64ImageDeserializer__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Base64ImageDeserializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Base64ImageDeserializer__SWIG_1")]
   public static extern global::System.IntPtr Base64ImageDeserializer__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, uint jarg3, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CTFDeserializer")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CTFDeserializer")]
   public static extern global::System.IntPtr CTFDeserializer([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CBFDeserializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CBFDeserializer__SWIG_0")]
   public static extern global::System.IntPtr CBFDeserializer__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_CBFDeserializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_CBFDeserializer__SWIG_1")]
   public static extern global::System.IntPtr CBFDeserializer__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKFeatureDeserializer")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKFeatureDeserializer")]
   public static extern global::System.IntPtr HTKFeatureDeserializer(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKMLFDeserializer__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKMLFDeserializer__SWIG_0")]
   public static extern global::System.IntPtr HTKMLFDeserializer__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, uint jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, bool jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKMLFDeserializer__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKMLFDeserializer__SWIG_1")]
   public static extern global::System.IntPtr HTKMLFDeserializer__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, uint jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_HTKMLFBinaryDeserializer")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_HTKMLFBinaryDeserializer")]
   public static extern global::System.IntPtr HTKMLFBinaryDeserializer([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_LatticeDeserializer")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_LatticeDeserializer")]
   public static extern global::System.IntPtr LatticeDeserializer([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TextFormatMinibatchSource__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TextFormatMinibatchSource__SWIG_0")]
   public static extern global::System.IntPtr TextFormatMinibatchSource__SWIG_0([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, bool jarg4, uint jarg5, bool jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TextFormatMinibatchSource__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TextFormatMinibatchSource__SWIG_1")]
   public static extern global::System.IntPtr TextFormatMinibatchSource__SWIG_1([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, bool jarg4, uint jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TextFormatMinibatchSource__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TextFormatMinibatchSource__SWIG_2")]
   public static extern global::System.IntPtr TextFormatMinibatchSource__SWIG_2([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, bool jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TextFormatMinibatchSource__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TextFormatMinibatchSource__SWIG_3")]
   public static extern global::System.IntPtr TextFormatMinibatchSource__SWIG_3([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TextFormatMinibatchSource__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TextFormatMinibatchSource__SWIG_4")]
   public static extern global::System.IntPtr TextFormatMinibatchSource__SWIG_4([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ComputeInputPerDimMeansAndInvStdDevs__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ComputeInputPerDimMeansAndInvStdDevs__SWIG_0")]
   public static extern void ComputeInputPerDimMeansAndInvStdDevs__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ComputeInputPerDimMeansAndInvStdDevs__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ComputeInputPerDimMeansAndInvStdDevs__SWIG_1")]
   public static extern void ComputeInputPerDimMeansAndInvStdDevs__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_SetMaxNumCPUThreads")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_SetMaxNumCPUThreads")]
   public static extern void SetMaxNumCPUThreads(uint jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_GetMaxNumCPUThreads")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_GetMaxNumCPUThreads")]
   public static extern uint GetMaxNumCPUThreads();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_ProgressWriter")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_ProgressWriter")]
   public static extern global::System.IntPtr new_ProgressWriter(uint jarg1, uint jarg2, uint jarg3, uint jarg4, uint jarg5, uint jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_ProgressWriter")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_ProgressWriter")]
   public static extern void delete_ProgressWriter(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnWriteTrainingUpdate")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnWriteTrainingUpdate")]
   public static extern void ProgressWriter_OnWriteTrainingUpdate(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnWriteTestUpdate")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnWriteTestUpdate")]
   public static extern void ProgressWriter_OnWriteTestUpdate(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnWriteDistributedSyncUpdate")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnWriteDistributedSyncUpdate")]
   public static extern void ProgressWriter_OnWriteDistributedSyncUpdate(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnTrainingUpdateEnd")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnTrainingUpdateEnd")]
   public static extern void ProgressWriter_OnTrainingUpdateEnd(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnWriteTrainingSummary")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnWriteTrainingSummary")]
   public static extern void ProgressWriter_OnWriteTrainingSummary(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, uint jarg3, uint jarg4, double jarg5, double jarg6, uint jarg7);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnWriteTestSummary")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriter_OnWriteTestSummary")]
   public static extern void ProgressWriter_OnWriteTestSummary(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, uint jarg3, uint jarg4, double jarg5, uint jarg6);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriter_Write")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriter_Write")]
   public static extern void ProgressWriter_Write(global::System.Runtime.InteropServices.HandleRef jarg1, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg2, double jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriter_TotalTrainingUpdates")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriter_TotalTrainingUpdates")]
   public static extern uint ProgressWriter_TotalTrainingUpdates(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_ProgressWriter_TotalTestUpdates")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_ProgressWriter_TotalTestUpdates")]
   public static extern uint ProgressWriter_TotalTestUpdates(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_0")]
   public static extern global::System.IntPtr Crop__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, uint jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_1")]
   public static extern global::System.IntPtr Crop__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, uint jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_2")]
   public static extern global::System.IntPtr Crop__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_3")]
   public static extern global::System.IntPtr Crop__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_4")]
   public static extern global::System.IntPtr Crop__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg5);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Crop__SWIG_5")]
   public static extern global::System.IntPtr Crop__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Cast__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Cast__SWIG_0")]
   public static extern global::System.IntPtr Cast__SWIG_0(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2, [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]string jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Cast__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Cast__SWIG_1")]
   public static extern global::System.IntPtr Cast__SWIG_1(global::System.Runtime.InteropServices.HandleRef jarg1, int jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_FullDataSweep_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_FullDataSweep_get")]
   public static extern uint TrainingParameterScheduleDouble_FullDataSweep_get();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_IgnoredMinibatchSize_get")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_IgnoredMinibatchSize_get")]
   public static extern uint TrainingParameterScheduleDouble_IgnoredMinibatchSize_get();
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_0")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_0")]
   public static extern global::System.IntPtr new_TrainingParameterScheduleDouble__SWIG_0(double jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_1")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_1")]
   public static extern global::System.IntPtr new_TrainingParameterScheduleDouble__SWIG_1(double jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_2")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_2")]
   public static extern global::System.IntPtr new_TrainingParameterScheduleDouble__SWIG_2(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2, uint jarg3);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_3")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_3")]
   public static extern global::System.IntPtr new_TrainingParameterScheduleDouble__SWIG_3(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_4")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_4")]
   public static extern global::System.IntPtr new_TrainingParameterScheduleDouble__SWIG_4(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_IsSweepBased")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_IsSweepBased")]
   public static extern bool TrainingParameterScheduleDouble_IsSweepBased(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_delete_TrainingParameterScheduleDouble")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_delete_TrainingParameterScheduleDouble")]
   public static extern void delete_TrainingParameterScheduleDouble(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_5")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_new_TrainingParameterScheduleDouble__SWIG_5")]
   public static extern global::System.IntPtr new_TrainingParameterScheduleDouble__SWIG_5(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_Serialize")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_Serialize")]
   public static extern global::System.IntPtr TrainingParameterScheduleDouble_Serialize(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_CurrentVersion")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_CurrentVersion")]
   public static extern uint TrainingParameterScheduleDouble_CurrentVersion(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_Deserialize")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_Deserialize")]
   public static extern global::System.IntPtr TrainingParameterScheduleDouble_Deserialize(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_AreEqual")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_AreEqual")]
   public static extern bool TrainingParameterScheduleDouble_AreEqual(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_GetMinibatchSize")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_GetMinibatchSize")]
   public static extern uint TrainingParameterScheduleDouble_GetMinibatchSize(global::System.Runtime.InteropServices.HandleRef jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_SetMinibatchSize")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_TrainingParameterScheduleDouble_SetMinibatchSize")]
   public static extern void TrainingParameterScheduleDouble_SetMinibatchSize(global::System.Runtime.InteropServices.HandleRef jarg1, uint jarg2);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Parameter_SWIGUpcast")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Parameter_SWIGUpcast")]
   public static extern global::System.IntPtr Parameter_SWIGUpcast(global::System.IntPtr jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Constant_SWIGUpcast")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Constant_SWIGUpcast")]
   public static extern global::System.IntPtr Constant_SWIGUpcast(global::System.IntPtr jarg1);
 
-  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.0.dll", EntryPoint="CSharp_CNTK_Trainer_SWIGSmartPtrUpcast")]
+  [global::System.Runtime.InteropServices.DllImport("Cntk.Core.CSBinding-2.8.1.dll", EntryPoint="CSharp_CNTK_Trainer_SWIGSmartPtrUpcast")]
   public static extern global::System.IntPtr Trainer_SWIGSmartPtrUpcast(global::System.IntPtr jarg1);
 }
 
