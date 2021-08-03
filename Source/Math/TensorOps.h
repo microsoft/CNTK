@@ -153,6 +153,48 @@ DECL half sin_(half v) {
 #endif
 }
 
+DECL half tan_(half v)
+{
+    return half(tanf((float)v));
+}
+
+DECL half asin_(half v)
+{
+    return half(asinf((float)v));
+}
+
+DECL half acos_(half v)
+{
+    return half(acosf((float)v));
+}
+
+DECL half atan_(half v)
+{
+    return half(atanf((float) v));
+}
+
+DECL half sinh_(half v)
+{
+    return half(sinhf((float)v));
+}
+
+DECL half cosh_(half v)
+{
+    return half(coshf((float)v));
+}
+
+DECL half asinh_(half v)
+{
+    return half(asinhf((float) v));
+}
+
+DECL half atanh_(half v)
+{
+    return half(atanhf((float)v));
+}
+
+
+
 DECL half floor_(half v) {
 #if __CUDA_ARCH__ >= 700 || __CUDA_ARCH__ == 600
     return hfloor(v);
@@ -178,6 +220,10 @@ DECL bool isnan_(half v) {
 #else
     return v != v;
 #endif
+}
+DECL bool isnan_(int v)
+{
+    return false;
 }
 
 // max/min
@@ -457,7 +503,7 @@ DefNullaryOp(ConstOne, 1);
 #pragma push_macro("DefUnaryOp")
 #define DefUnaryOp(op, expr)         \
     template <class ElemType>        \
-    DECL ElemType Op##op(ElemType a) \
+    DECL ElemType Op##op(const ElemType a) \
     {                                \
         return expr;                 \
     }

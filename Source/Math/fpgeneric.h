@@ -154,6 +154,18 @@ inline cublasStatus_t cublasgemmHelper(cublasHandle_t handle, cublasOperation_t 
     cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH);
     return cublasGemmEx(handle, transa, transb, m, n, k, &h_a, A, CUDA_R_16F, lda, B, CUDA_R_16F, ldb, &h_b, C, CUDA_R_16F, ldc, CUDA_R_32F, CUBLAS_GEMM_DFALT);
 }
+inline cublasStatus_t cublasgemmHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const int *alpha, const int *A, int lda, const int *B, int ldb, const int *beta, int *C, int ldc)
+{
+    RuntimeError("Unsupported template argument(int) in cublasgemmHelper");
+}
+inline cublasStatus_t cublasgemmHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const short *alpha, const short *A, int lda, const short *B, int ldb, const short *beta, short *C, int ldc)
+{
+    RuntimeError("Unsupported template argument(short) in cublasgemmHelper");
+}
+inline cublasStatus_t cublasgemmHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const char *alpha, const char *A, int lda, const char *B, int ldb, const char *beta, char *C, int ldc)
+{
+    RuntimeError("Unsupported template argument(char) in cublasgemmHelper");
+}
 
 // batched gemm
 inline cublasStatus_t cublasGemmBatchedHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float* alpha, const float *Aarray[], int lda, const float *Barray[], int ldb, const float *beta, float *Carray[], int ldc, int batchCount)
@@ -167,6 +179,18 @@ inline cublasStatus_t cublasGemmBatchedHelper(cublasHandle_t handle, cublasOpera
 inline cublasStatus_t cublasGemmBatchedHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const half* alpha, const half *Aarray[], int lda, const half *Barray[], int ldb, const half *beta, half *Carray[], int ldc, int batchCount)
 {
     return cublasHgemmBatched(handle, transa, transb, m, n, k, alpha, (const __half**)Aarray, lda, (const __half**)Barray, ldb, beta, (__half**)Carray, ldc, batchCount);
+}
+inline cublasStatus_t cublasGemmBatchedHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const int *alpha, const int *Aarray[], int lda, const int *Barray[], int ldb, const int *beta, int *Carray[], int ldc, int batchCount)
+{
+    RuntimeError("Unsupported template argument(int) in cublasGemmBatchedHelper");
+}
+inline cublasStatus_t cublasGemmBatchedHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const short *alpha, const short *Aarray[], int lda, const short *Barray[], int ldb, const short *beta, short *Carray[], int ldc, int batchCount)
+{
+    RuntimeError("Unsupported template argument(short) in cublasGemmBatchedHelper");
+}
+inline cublasStatus_t cublasGemmBatchedHelper(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const char *alpha, const char *Aarray[], int lda, const char *Barray[], int ldb, const char *beta, char *Carray[], int ldc, int batchCount)
+{
+    RuntimeError("Unsupported template argument(char) in cublasGemmBatchedHelper");
 }
 
 // axpy
@@ -182,6 +206,18 @@ inline cublasStatus_t cublasaxpyHelper(cublasHandle_t handle, int n, const half*
 {
     float tmp_alpha = *alpha;
     return cublasAxpyEx(handle, n, (void*)&tmp_alpha, CUDA_R_32F, (void*)x, CUDA_R_16F, incx, (void*)y, CUDA_R_16F, incy, CUDA_R_32F);
+}
+inline cublasStatus_t cublasaxpyHelper(cublasHandle_t handle, int n, const int *alpha, const int *x, int incx, int *y, int incy)
+{
+    RuntimeError("Unsupported template argument(int) in cublasaxpyHelper");
+}
+inline cublasStatus_t cublasaxpyHelper(cublasHandle_t handle, int n, const short *alpha, const short *x, int incx, short *y, int incy)
+{
+    RuntimeError("Unsupported template argument(short) in cublasaxpyHelper");
+}
+inline cublasStatus_t cublasaxpyHelper(cublasHandle_t handle, int n, const char *alpha, const char *x, int incx, char *y, int incy)
+{
+    RuntimeError("Unsupported template argument(char) in cublasaxpyHelper");
 }
 
 // transpose using geam
@@ -205,6 +241,18 @@ inline cublasStatus_t cublasTransposeHelper(cublasHandle_t, cublasOperation_t, c
     else
         RuntimeError("In place transpose(half) not supported."); // cublas do not support this either. There might be bug if this actually get called.
     return (cublasStatus_t) 0;
+}
+inline cublasStatus_t cublasTransposeHelper(cublasHandle_t, cublasOperation_t, cublasOperation_t, int m, int n, int *, int *A, int, int *, int *, int, int *C, int)
+{
+    RuntimeError("Unsupported template argument(int) in cublasTransposeHelper");
+}
+inline cublasStatus_t cublasTransposeHelper(cublasHandle_t, cublasOperation_t, cublasOperation_t, int m, int n, short *, short *A, int, short *, short *, int, short *C, int)
+{
+    RuntimeError("Unsupported template argument(short) in cublasTransposeHelper");
+}
+inline cublasStatus_t cublasTransposeHelper(cublasHandle_t, cublasOperation_t, cublasOperation_t, int m, int n, char *, char *A, int, char *, char *, int, char *C, int)
+{
+    RuntimeError("Unsupported template argument(char) in cublasTransposeHelper");
 }
 
 // asum
@@ -355,6 +403,18 @@ inline cublasStatus_t cublasamaxHelper(cublasHandle_t, int n, const half *x, int
     *result = (int) h_result_uint;
     return (cublasStatus_t) 0;
 }
+inline cublasStatus_t cublasamaxHelper(cublasHandle_t, int n, const int *x, int incx, int *result)
+{
+    RuntimeError("Unsupported template argument(int) in cublasasumHelper");
+}
+inline cublasStatus_t cublasamaxHelper(cublasHandle_t, int n, const short *x, int incx, int *result)
+{
+    RuntimeError("Unsupported template argument(short) in cublasasumHelper");
+}
+inline cublasStatus_t cublasamaxHelper(cublasHandle_t, int n, const char *x, int incx, int *result)
+{
+    RuntimeError("Unsupported template argument(char) in cublasasumHelper");
+}
 
 // scal
 inline cublasStatus_t cublasscalHelper(cublasHandle_t handle, int n, const float *alpha, float *x, int incx)
@@ -370,13 +430,17 @@ inline cublasStatus_t cublasscalHelper(cublasHandle_t handle, int n, const half 
     float tmp_alpha = *alpha;
     return cublasScalEx(handle, n, (void*)&tmp_alpha, CUDA_R_32F, (void*)x, CUDA_R_16F, incx, CUDA_R_32F);
 }
-inline cublasStatus_t cublasscalHelper(cublasHandle_t,int,const char *,char *, int)
+inline cublasStatus_t cublasscalHelper(cublasHandle_t, int, const int *, int *, int)
 {
-    RuntimeError("Unsupported template argument(char) in cublas_scal");
+    RuntimeError("Unsupported template argument(int) in cublas_scal");
 }
-inline cublasStatus_t cublasscalHelper(cublasHandle_t,int,const short *,short *, int)
+inline cublasStatus_t cublasscalHelper(cublasHandle_t, int, const short *, short *, int)
 {
     RuntimeError("Unsupported template argument(short) in cublas_scal");
+}
+inline cublasStatus_t cublasscalHelper(cublasHandle_t, int, const char *, char *, int)
+{
+    RuntimeError("Unsupported template argument(char) in cublas_scal");
 }
 
 // dot
@@ -391,6 +455,18 @@ inline cublasStatus_t cublasdotHelper(cublasHandle_t handle, int n, const double
 inline cublasStatus_t cublasdotHelper(cublasHandle_t handle, int n, const half *x, int incx, const half *y, int incy, half *result)
 {
     return cublasDotEx(handle, n, (void*)x, CUDA_R_16F, incx, (void*)y, CUDA_R_16F, incy, (void*)result, CUDA_R_16F, CUDA_R_32F);
+}
+inline cublasStatus_t cublasdotHelper(cublasHandle_t handle, int n, const int *x, int incx, const int *y, int incy, int *result)
+{
+    RuntimeError("Unsupported template argument(int) in cublasdotHelper");
+}
+inline cublasStatus_t cublasdotHelper(cublasHandle_t handle, int n, const short *x, int incx, const short *y, int incy, short *result)
+{
+    RuntimeError("Unsupported template argument(short) in cublasdotHelper");
+}
+inline cublasStatus_t cublasdotHelper(cublasHandle_t handle, int n, const char *x, int incx, const char *y, int incy, char *result)
+{
+    RuntimeError("Unsupported template argument(char) in cublasdotHelper");
 }
 
 // curand
@@ -414,15 +490,17 @@ inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t, half *outpu
 
     return (curandStatus_t) 0;
 }
-
-inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t, char *, size_t)
+inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t, int *, size_t)
 {
-    RuntimeError("Unsupported template argument(char) in GPUSparseMatrix");
+    RuntimeError("Unsupported template argument(int) in GPUSparseMatrix");
 }
-
 inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t, short *, size_t)
 {
     RuntimeError("Unsupported template argument(short) in GPUSparseMatrix");
+}
+inline curandStatus_t curandGenerateUniformHelper(curandGenerator_t, char *, size_t)
+{
+    RuntimeError("Unsupported template argument(char) in GPUSparseMatrix");
 }
 
 inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t generator, float *outputPtr, size_t n, float mean, float stddev)
@@ -1017,6 +1095,18 @@ inline cudaError_t SortPairsDescending(void *d_temp_storage, size_t &temp_storag
 inline cudaError_t SortPairsDescending(void *, size_t, const half *, half *, const uint64_t *, uint64_t *, int, int, int, cudaStream_t)
 {
     RuntimeError("Unsupported template argument(half) in SortPairsDescending");
+}
+inline cudaError_t SortPairsDescending(void *, size_t, const int *, int *, const uint64_t *, uint64_t *, int, int, int, cudaStream_t)
+{
+    RuntimeError("Unsupported template argument(int) in SortPairsDescending");
+}
+inline cudaError_t SortPairsDescending(void *, size_t, const short *, short *, const uint64_t *, uint64_t *, int, int, int, cudaStream_t)
+{
+    RuntimeError("Unsupported template argument(short) in SortPairsDescending");
+}
+inline cudaError_t SortPairsDescending(void *, size_t, const char *, char *, const uint64_t *, uint64_t *, int, int, int, cudaStream_t)
+{
+    RuntimeError("Unsupported template argument(char) in SortPairsDescending");
 }
 
 #endif // CPUONLY
