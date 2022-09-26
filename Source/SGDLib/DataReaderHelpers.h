@@ -46,7 +46,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         bool useParallelTrain,
                                         StreamMinibatchInputs& inputMatrices,
                                         size_t& actualMBSize, 
-                                        const MPIWrapperPtr& mpi)
+                                        const MPIWrapperPtr& mpi,
+                                        size_t& actualNumWords)
     {
         // Reading consists of a sequence of Reader API calls:
         //  - GetMinibatch() --fills the inputMatrices and copies the MBLayout from Reader into inputMatrices
@@ -71,8 +72,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto uids = node->getuidprt();
             auto boundaries = node->getboundaryprt();
             auto extrauttmap = node->getextrauttmap();
+            auto wids = node->getwidprt();
+            auto nws = node->getnwprt();
+            trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *wids, *nws, *boundaries, *extrauttmap);
 
-            trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
+            actualNumWords = 0;
+            for (size_t i = 0; i < (*nws).size(); i++)
+                actualNumWords += (*nws)[i];
         }
 
         // TODO: move this into shim for the old readers.
@@ -284,11 +290,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         typedef std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> Lattice;
         typedef std::vector<size_t> Uid;
+        typedef std::vector<size_t> Wid;
+        typedef std::vector<short> Nw;
         typedef std::vector<size_t> ExtrauttMap;
         typedef std::vector<size_t> Boundaries;
 
         typedef std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>* LatticePtr;
         typedef std::vector<size_t>* UidPtr;
+        typedef std::vector<size_t>* WidPtr;
+        typedef std::vector<short>* NwPtr;
         typedef std::vector<size_t>* ExtrauttMapPtr;
         typedef std::vector<size_t>* BoundariesPtr;
         typedef StreamMinibatchInputs Matrices;
@@ -298,6 +308,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MBLayoutPtr m_MBLayoutCache;
         Lattice m_LatticeCache;
         Uid m_uidCache;
+        Wid m_widCache;
+        Nw m_nwCache;
         ExtrauttMap m_extrauttmapCache;
         Boundaries m_BoundariesCache;
         shared_ptr<Matrix<ElemType>> m_netCriterionAccumulator;
@@ -313,6 +325,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrices m_netInputMatrixPtr;
         LatticePtr m_netLatticePtr;
         UidPtr m_netUidPtr;
+        WidPtr m_netWidPtr;
+        NwPtr m_netNwPtr;
         ExtrauttMapPtr m_netExtrauttMapPtr;
         BoundariesPtr m_netBoundariesPtr;
         // we remember the pointer to the learnable Nodes so that we can accumulate the gradient once a sub-minibatch is done
@@ -352,7 +366,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         SubminibatchDispatcher()
-            : m_MBLayoutCache(nullptr), m_netLatticePtr(nullptr), m_netExtrauttMapPtr(nullptr), m_netUidPtr(nullptr), m_netBoundariesPtr(nullptr)
+            : m_MBLayoutCache(nullptr), m_netLatticePtr(nullptr), m_netExtrauttMapPtr(nullptr), m_netUidPtr(nullptr), m_netBoundariesPtr(nullptr), m_netWidPtr(nullptr), m_netNwPtr(nullptr)
         {
         }
 
@@ -398,6 +412,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_netLatticePtr = node->getLatticePtr();
                 m_netExtrauttMapPtr = node->getextrauttmap();
                 m_netUidPtr = node->getuidprt();
+                m_netWidPtr = node->getwidprt();
+                m_netNwPtr = node->getnwprt();
                 m_netBoundariesPtr = node->getboundaryprt();
                 m_hasLattices = true;
             }
@@ -408,6 +424,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_netUidPtr = nullptr;
                 m_netBoundariesPtr = nullptr;
                 m_hasLattices = false;
+                m_netWidPtr = nullptr;
+                m_netNwPtr = nullptr;
             }
         }
 
@@ -444,11 +462,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_uidCache.clear();
                 m_extrauttmapCache.clear();
                 m_BoundariesCache.clear();
+                m_widCache.clear();
+                m_nwCache.clear();
+
 
                 m_LatticeCache = *m_netLatticePtr;
                 m_uidCache = *m_netUidPtr;
                 m_extrauttmapCache = *m_netExtrauttMapPtr;
                 m_BoundariesCache = *m_netBoundariesPtr;
+                m_widCache = *m_netWidPtr;
+                m_nwCache = *m_netNwPtr;
             }
 
             // subminibatches are cutted at the parallel sequence level;
@@ -495,10 +518,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             BoundariesPtr decimatedBoundaryPtr,   /* output: boundary after decimation*/
             ExtrauttMapPtr decimatedExtraMapPtr,  /* output: extramap after decimation*/
             UidPtr decimatedUidPtr,               /* output: Uid after decimation*/
+            WidPtr decimatedWidPtr,               /* output: Wid after decimation*/
+            NwPtr decimatedNwPtr,               /* output: Nw after decimation*/
             const Lattice lattices,               /* input: lattices to be decimated */
             const Boundaries boundaries,          /* input: boundary to be decimated */
             const ExtrauttMap extraMaps,          /* input: extra map to be decimated */
             const Uid uids,                       /* input: uid to be decimated*/
+            const Wid wids,                       /* input: uid to be decimated*/
+            const Nw nws,                       /* input: uid to be decimated*/
             pair<size_t, size_t> parallelSeqRange /* input: what parallel sequence range we are looking at */
             )
         {
@@ -509,12 +536,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             decimatedBoundaryPtr->clear();
             decimatedExtraMapPtr->clear();
             decimatedUidPtr->clear();
+            decimatedWidPtr->clear();
+            decimatedNwPtr->clear();
 
             size_t stFrame = 0;
+            size_t stWord = 0;
             for (size_t iUtt = 0; iUtt < extraMaps.size(); iUtt++)
             {
                 size_t numFramesInThisUtterance = lattices[iUtt]->getnumframes();
                 size_t iParallelSeq = extraMaps[iUtt]; // i-th utterance belongs to iParallelSeq-th parallel sequence
+                size_t numWordsInThisUtterance = nws[iUtt];
                 if (iParallelSeq >= parallelSeqStId && iParallelSeq < parallelSeqEnId)
                 {
                     // this utterance has been selected
@@ -522,8 +553,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     decimatedBoundaryPtr->insert(decimatedBoundaryPtr->end(), boundaries.begin() + stFrame, boundaries.begin() + stFrame + numFramesInThisUtterance);
                     decimatedUidPtr->insert(decimatedUidPtr->end(), uids.begin() + stFrame, uids.begin() + stFrame + numFramesInThisUtterance);
                     decimatedExtraMapPtr->push_back(extraMaps[iUtt] - parallelSeqStId);
+                    decimatedWidPtr->insert(decimatedWidPtr->end(), wids.begin() + stWord, wids.begin() + stWord + numWordsInThisUtterance);
+                    decimatedNwPtr->push_back(numWordsInThisUtterance);
                 }
                 stFrame += numFramesInThisUtterance;
+                stWord += numWordsInThisUtterance;
             }
         }
 
@@ -539,9 +573,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 DecimateLattices(
                     /*output */
-                    m_netLatticePtr, m_netBoundariesPtr, m_netExtrauttMapPtr, m_netUidPtr,
+                    m_netLatticePtr, m_netBoundariesPtr, m_netExtrauttMapPtr, m_netUidPtr, m_netWidPtr, m_netNwPtr,
                     /*input to be decimated */
-                    m_LatticeCache, m_BoundariesCache, m_extrauttmapCache, m_uidCache,
+                    m_LatticeCache, m_BoundariesCache, m_extrauttmapCache, m_uidCache, m_widCache, m_nwCache,
                     /* what range we want ? */
                     seqRange);
             }

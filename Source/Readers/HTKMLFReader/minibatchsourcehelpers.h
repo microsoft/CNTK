@@ -194,6 +194,7 @@ static void augmentneighbors(const std::vector<std::vector<float>>& frames, cons
 // TODO: This is currently being hardcoded to unsigned short for saving space, which means untied context-dependent phones
 // will not work. This needs to be changed to dynamically choose what size to use based on the number of class ids.
 typedef unsigned short CLASSIDTYPE;
+typedef unsigned int WORDIDTYPE;
 typedef unsigned short HMMIDTYPE;
 
 #ifndef _MSC_VER
