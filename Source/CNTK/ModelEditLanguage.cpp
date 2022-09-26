@@ -20,7 +20,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // string2 - second string to compare
 // alternate - alternate naming of the string
 // return - true if strings are equal insensitive and modifies string1 to sensitive version if different
-bool EqualInsensitive(std::string& string1, const char* string2, const char* alternate /*=NULL*/)
+bool EqualInsensitive(std::string& string1, const char* string2, const char* alternate /*=nullptr*/)
 {
     bool equal = !_strnicmp(string1.c_str(), string2, string1.size());
 
@@ -32,7 +32,7 @@ bool EqualInsensitive(std::string& string1, const char* string2, const char* alt
     if (equal && strcmp(string1.c_str(), string2))
         string1 = string2;
 
-    if (!equal && alternate != NULL)
+    if (!equal && alternate != nullptr)
     {
         equal = !_strnicmp(string1.c_str(), alternate, string1.size());
 
@@ -51,7 +51,8 @@ bool EqualInsensitive(std::string& string1, const char* string2, const char* alt
 // MELProperty - the properties for SetProperty
 enum MELProperty
 {
-    melPropNull,
+    melProp
+        ,
     melPropParameterUpdateRequired,
     melPropLearningRateMultiplier,
     melPropFeature,
@@ -188,7 +189,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::wstring fileName = params[0];
 
         auto cn = m_netNdlDefault->cn;
-        if (cn == NULL)
+        if (cn == nullptr)
             RuntimeError("SaveDefaultModel can only be called after a default name exists (i.e., at least one model is loaded.)");
 
         // validate the network before we save it out
@@ -207,7 +208,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::wstring fileName = params[1];
 
         NetNdl<ElemType>* netNdl = &m_mapNameToNetNdl[modelName];
-        if (netNdl->cn == NULL)
+        if (netNdl->cn == nullptr)
             RuntimeError("SaveModel can only be called after a network has been setup, no active model named %s.", modelName.c_str());
 
         // validate and finish the second pass through NDL if any in-line NDL was defined
