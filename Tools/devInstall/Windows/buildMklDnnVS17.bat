@@ -4,13 +4,15 @@
 @REM batch script to build mkl-dnn library for CNTK
 
 @echo off
-if /I "%CMDCMDLINE%" neq ""%COMSPEC%" " (
+setlocal enabledelayedexpansion 
+set CMDCURRENT=!CMDCMDLINE!
+set CMD="!COMSPEC!"
+if /I "!CMDCURRENT!" neq "!CMD! " (
     echo.
     echo Please execute this script from inside a regular Windows command prompt.
     echo.
     exit /b 0
 )
-setlocal
 if "%~1"=="" goto HELP
 if "%~1"=="-?" goto HELP
 if /I "%~1"=="-h" goto HELP
