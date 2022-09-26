@@ -50,7 +50,7 @@ tuple, strings, etc.)::
 
         @staticmethod
         def deserialize(inputs, name, state):
-            return = MySigmoid(inputs[0], name)
+            return MySigmoid(inputs[0], name)
 
 This can now be used as a normal operator like::
 
