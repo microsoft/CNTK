@@ -1,0 +1,26 @@
+if [ -z "$BASH_VERSION" ]; then
+  echo Error: only Bash is supported.
+elif [ "$(basename "$0" 2> /dev/null)" == "activate-cntk" ]; then
+  echo Error: this script is meant to be sourced. Run 'source activate-cntk'
+else
+  export PATH="/cntk/cntk/bin:$PATH"
+  export LD_LIBRARY_PATH="/cntk/cntk/lib:/cntk/cntk/dependencies/lib:/usr/lib/openmpi:$LD_LIBRARY_PATH"
+  source "/opt/anaconda/bin/activate" "/opt/anaconda/envs/cntk-py36"
+
+  cat <<MESSAGE
+
+************************************************************
+CNTK is activated.
+
+Please checkout tutorials and examples here:
+  /cntk/Tutorials
+  /cntk/Examples
+
+To deactivate the environment run
+
+  source /opt/anaconda/bin/deactivate
+
+************************************************************
+MESSAGE
+
+fi
