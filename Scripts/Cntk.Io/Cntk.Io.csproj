@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net452</TargetFramework>
+    <AssemblyName>Cntk.Io</AssemblyName>
+    <RuntimeIdentifiers>win</RuntimeIdentifiers>
+    <OutputType>Library</OutputType>
+    <Company>Lokad</Company>
+    <Copyright>Copyright © Lokad 2017</Copyright>
+    <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <PackageId>Cntk.Io</PackageId>
+    <PackageVersion>1.0.0.0</PackageVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+</Project>
