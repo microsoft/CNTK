@@ -193,9 +193,21 @@ namespace CNTK
         if (numSequences == 1)
         {
             if (createNewCopy)
-                valueData = sequences[0]->DeepClone();
+                valueData = sequences[0]->DeepClone(readOnly);
             else
-                valueData = sequences[0];
+            {
+                if (sequences[0]->IsReadOnly() != readOnly)
+                {
+                    if (readOnly)
+                        // Alias() without data copy is sufficient if the sequences[0] is not readOnly, and the created Value should be readonly
+                        valueData = sequences[0]->Alias(readOnly);
+                    else
+                        // DeepClone() is required if the sequence[0] is readonly, but the created Value is not readonly.
+                        valueData = sequences[0]->DeepClone(readOnly);
+                }
+                else
+                    valueData = sequences[0];
+            }
 
             // We can use the original buffer directly but need to reshape to the valueDataShape
             valueData = valueData->AsShape(valueDataShape);
@@ -268,8 +280,13 @@ namespace CNTK
         NDArrayViewPtr deviceValueData;
         if (device == valueData->Device())
         {
-            if (readOnly)
-                deviceValueData = valueData->Alias(readOnly);
+            if (readOnly != valueData->IsReadOnly())
+            {
+                if (readOnly)
+                    deviceValueData = valueData->Alias(readOnly);
+                else
+                    RuntimeError("Cannot create a non-read-only value object from a read-only view.");
+            }
             else
                 deviceValueData = valueData;
         }
