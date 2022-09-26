@@ -780,7 +780,7 @@ def HTKFeatureDeserializer(streams):
         if 'scp' not in stream:
             raise ValueError("No scp files specified for HTKFeatureDeserializer")
         dimension = stream.dim
-        scp_file = stream['scp']
+        scp_file = str(stream['scp'])
         broadcast = stream['broadcast'] if 'broadcast' in stream else False
         defines_mb_size = stream.get('defines_mb_size', False)
         max_sequence_length = stream.get('max_sequence_length', 65535)
