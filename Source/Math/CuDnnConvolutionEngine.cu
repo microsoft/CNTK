@@ -206,6 +206,200 @@ enum class AutotuningState : int
     Running = 2        // done tuning, no long performing auto-tuning, code is running normally
 };
 
+struct ConvAlgoInfoBase
+{
+    ConvAlgoInfoBase()
+        : LastBatchAlgoMBSize(0), MaxAlgoMBSize(0), maxMBSizeSeen(0), autotuningState(AutotuningState::Init), MaxAlgoWorkspaceSize(0), LastBatchAlgoWorkspaceSize(0), AlgoMathType(CUDNN_TENSOR_OP_MATH), WorkspaceCols(0), WorkspaceRows(0)
+    {
+    }
+    // Variables to stores states
+    size_t maxMBSizeSeen; // Max minibatch size seen. If batch size exceed this number, redo tuning from scratch. maxAlgo is tuned for batchsize following this batch.
+
+    size_t MaxAlgoMBSize;        // Batch size when current work space is allocated. If batch size returns to this size, directly pick the maxAlgo
+    size_t MaxAlgoWorkspaceSize; // First temporarily store possible workspace size for any algorithm, then store size for  maxAlgo after tunning
+
+    size_t LastBatchAlgoWorkspaceSize; // workspace size for selectedAlgo
+    size_t LastBatchAlgoMBSize;        // minibatch size for selectedAlgo
+
+    size_t DeterministicAlgoWorkspaceSize; // workspace size for deterministic algorithm
+
+    AutotuningState autotuningState; // state of auto-tuning: Init, PendingTuning and Running
+    int32_t selectedAlgo;            // currently selected algorithm
+    int32_t maxAlgo;                 // algorithm that was selected when the current workspace is allocated
+
+    size_t WorkspaceCols, WorkspaceRows;
+
+    cudnnMathType_t AlgoMathType;
+
+    bool NeedAutotuning(size_t batchSize, size_t workspaceSize) const
+    {
+        // NVIDIA:
+        // It is not safe to assume that previously selected algorithm requires less or the same amount of workspace when minibatch size decrease
+        // Need to re-run auto-tuner everytime minibatch size grow.
+        // Use faster(may not be optimal) method to get algorithm when batchsize decrease
+        // Should remain reasonable performance when minibatch size changes frequently (e.g. distributed reading).
+        return (autotuningState != AutotuningState::Running ||
+                batchSize != LastBatchAlgoMBSize ||
+                workspaceSize < LastBatchAlgoWorkspaceSize);
+    }
+
+    // Record algorithm, batchsize and workspace right after tuning/init. Next batch will check to decide whether keep using recorded algorithm.
+    // If just tuned for MaxAlgo, also record that since maxAlgo tuning is heavy.
+    template <typename U>
+    void RecordAlgoBatchSizeWorkspaceSize(bool justTunedForMaxAlgo, U newAlgo, size_t batchSize, size_t workspaceSize)
+    {
+        selectedAlgo = newAlgo;
+        LastBatchAlgoMBSize = batchSize;
+        LastBatchAlgoWorkspaceSize = workspaceSize;
+
+        if (justTunedForMaxAlgo)
+        {
+            maxAlgo = newAlgo;
+            MaxAlgoMBSize = batchSize;
+            MaxAlgoWorkspaceSize = workspaceSize;
+        }
+    }
+};
+
+template <typename T>
+struct ConvAlgoInfo : ConvAlgoInfoBase
+{
+    using typeT = T;
+    using algoT = decltype(T::algo);
+
+    ConvAlgoInfo()
+        : ConvAlgoInfoBase()
+    {
+    }
+
+    ConvAlgoInfo(const ConvAlgoInfoBase& base)
+        : ConvAlgoInfoBase(base)
+    {
+    }
+
+    algoT GetSelectedAlgo() const
+    {
+        return static_cast<algoT>(selectedAlgo);
+    }
+
+    algoT GetMaxAlgo() const
+    {
+        return static_cast<algoT>(maxAlgo);
+    }
+};
+
+class CuDnnConvAlgoRegistry
+{
+public:
+    template <typename T>
+    bool Find(const ConvolveGeometry& geometry, cudnnDataType_t dataType, PoolKind poolKind, bool poolIncludePad, bool forceDeterministicAlgorithms, ConvAlgoInfo<T>& algo)
+    {
+        const std::string convType = typeid(T).name();
+        Key key{
+            geometry.KernelShape(),
+            geometry.Stride(),
+            geometry.LowerPad(),
+            geometry.UpperPad(),
+            geometry.MapCount(),
+            convType,
+            static_cast<int32_t>(dataType),
+            static_cast<int32_t>(poolKind),
+            poolIncludePad,
+            forceDeterministicAlgorithms,
+        };
+
+        std::lock_guard<std::mutex> guard(lock);
+
+        auto it = registry.find(key);
+        if (it == registry.end())
+            return false;
+
+        algo = ConvAlgoInfo<T>(it->second);
+
+        return true;
+    }
+
+    template <typename T>
+    void Register(const ConvolveGeometry& geometry, cudnnDataType_t dataType, PoolKind poolKind, bool poolIncludePad, bool forceDeterministicAlgorithms, const ConvAlgoInfo<T>& algo)
+    {
+        const std::string convType = typeid(T).name();
+        Key key{
+            geometry.KernelShape(),
+            geometry.Stride(),
+            geometry.LowerPad(),
+            geometry.UpperPad(),
+            geometry.MapCount(),
+            convType,
+            static_cast<int32_t>(dataType),
+            static_cast<int32_t>(poolKind),
+            poolIncludePad,
+            forceDeterministicAlgorithms,
+        };
+
+        std::lock_guard<std::mutex> guard(lock);
+        registry[key] = algo;
+    }
+
+private:
+    struct Key
+    {
+        TensorShape kernelShape;
+        TensorShape stride;
+        TensorShape lowerPad, upperPad;
+        TensorShape mapCount;
+        std::string convType;
+        int32_t dataType;
+        int32_t poolKind;
+        bool poolIncludePad;
+        bool forceDeterministicAlgorithms;
+
+        bool operator==(const Key& other) const
+        {
+            return this->kernelShape == other.kernelShape &&
+                   this->stride == other.stride &&
+                   this->lowerPad == other.lowerPad &&
+                   this->upperPad == other.upperPad &&
+                   this->mapCount == other.mapCount &&
+                   this->convType == other.convType &&
+                   this->dataType == other.dataType &&
+                   this->poolKind == other.poolKind &&
+                   this->poolIncludePad == other.poolIncludePad &&
+                   this->forceDeterministicAlgorithms == other.forceDeterministicAlgorithms;
+        }
+    };
+
+    struct KeyHash
+    {
+        size_t operator()(const Key& key) const
+        {
+            size_t hash = 0;
+            for (auto dim : key.kernelShape.GetDims())
+                hash ^= std::hash<size_t>{}(dim) << 1;
+            for (auto dim : key.stride.GetDims())
+                hash ^= std::hash<size_t>{}(dim) << 1;
+            for (auto dim : key.lowerPad.GetDims())
+                hash ^= std::hash<size_t>{}(dim) << 1;
+            for (auto dim : key.upperPad.GetDims())
+                hash ^= std::hash<size_t>{}(dim) << 1;
+            for (auto dim : key.mapCount.GetDims())
+                hash ^= std::hash<size_t>{}(dim) << 1;
+            hash ^= std::hash<std::string>{}(key.convType) << 1;
+            hash ^= std::hash<int32_t>{}(key.dataType) << 1;
+            hash ^= std::hash<int32_t>{}(key.poolKind) << 1;
+            hash ^= std::hash<bool>{}(key.poolIncludePad) << 1;
+            hash ^= std::hash<bool>{}(key.forceDeterministicAlgorithms) << 1;
+
+            return hash;
+        }
+    };
+
+    std::unordered_map<Key, ConvAlgoInfoBase, KeyHash> registry;
+    std::mutex lock;
+};
+
+// Global registry
+auto algoRegistry = std::make_unique<CuDnnConvAlgoRegistry>();
+
 template <class ElemType>
 class CuDnnConvolutionEngine : public ConvolutionEngine<ElemType>
 {
@@ -214,10 +408,11 @@ public:
     using typename Base::Mat;
 
 public:
-    CuDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
+    CuDnnConvolutionEngine(CuDnnConvAlgoRegistry* registry, ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
                            size_t maxTempMemSizeInSamples, PoolKind poolKind, bool forceDeterministicAlgorithms,
                            bool poolIncludePad, bool inputHasFreeDimension)
         : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad),
+          m_registry(registry),
           m_cudnn(CuDnn::Instance()),
           m_dataType(CuDnnTensor::GetDataType<ElemType>()),
           m_forceDeterministicAlgorithms(forceDeterministicAlgorithms),
@@ -320,7 +515,7 @@ protected:
         if(m_dataType == CUDNN_DATA_HALF) CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, m_fwdAlgo.AlgoMathType));
         else CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, CUDNN_DEFAULT_MATH));
         // Perform forward convolution operation.
-        CUDNN_CALL(cudnnConvolutionForward(*m_cudnn, &C::One, m_inT, ptr(in), *m_kernelT, ptr(kernel), *m_conv, m_fwdAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), &C::Zero, m_outT, ptr(out)));
+        CUDNN_CALL(cudnnConvolutionForward(*m_cudnn, &C::One, m_inT, ptr(in), *m_kernelT, ptr(kernel), *m_conv, m_fwdAlgo.GetSelectedAlgo(), ptr(workspace), workspace.BufferSize(), &C::Zero, m_outT, ptr(out)));
     }
 
     void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) override
@@ -385,7 +580,7 @@ protected:
         // Compute gradients with respect to the output tensor (data).
         if(m_dataType == CUDNN_DATA_HALF) CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, m_backDataAlgo.AlgoMathType));
         else CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, CUDNN_DEFAULT_MATH));
-        CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_kernelT, ptr(kernel), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
+        CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_kernelT, ptr(kernel), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.GetSelectedAlgo(), ptr(workspace), workspace.BufferSize(), accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
     }
 
     void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace) override
@@ -459,7 +654,7 @@ protected:
         // Compute gradients with respect to the output tensor (data).
         if(m_dataType == CUDNN_DATA_HALF) CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, m_backFiltAlgo.AlgoMathType));
         else CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, CUDNN_DEFAULT_MATH));
-        CUDNN_CALL(cudnnConvolutionBackwardFilter(*m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), *m_conv, m_backFiltAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), accumulateGradient ? &C::One : &C::Zero, *m_kernelT, ptr(kernelGrad)));
+        CUDNN_CALL(cudnnConvolutionBackwardFilter(*m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), *m_conv, m_backFiltAlgo.GetSelectedAlgo(), ptr(workspace), workspace.BufferSize(), accumulateGradient ? &C::One : &C::Zero, *m_kernelT, ptr(kernelGrad)));
     }
 
     void EnsurePoolingInitialized() override
@@ -509,6 +704,11 @@ private:
         if (!algo.NeedAutotuning(batchSize, workspace.BufferSize()))
             return;
 
+        if (m_registry->Find(*m_geometry, m_dataType, m_poolKind, m_poolIncludePad, m_forceDeterministicAlgorithms, algo)) {
+            workspace.Resize(algo.WorkspaceRows, algo.WorkspaceCols, 0, false);
+            return;
+        }
+
         // if batchsize changes again when just finish init, go back to init again
         if (algo.autotuningState == AutotuningState::PendingTuning && batchSize > algo.LastBatchAlgoMBSize)
             algo.autotuningState = AutotuningState::Init;
@@ -518,7 +718,8 @@ private:
         {
             cudaDeviceSynchronize(); // make sure no in-flight GPU kernels using workspace before release its memory
             workspace.Resize(0,0,0,false);
-            algo.RecordAlgoBatchSizeWorkspaceSize(true, algo.selectedAlgo, 0, 0);
+            const auto selectedAlgo = algo.GetSelectedAlgo();
+            algo.RecordAlgoBatchSizeWorkspaceSize(true, selectedAlgo, 0, 0);
             algo.autotuningState = AutotuningState::Init;
         }
         else if (algo.autotuningState == AutotuningState::Running && !m_forceDeterministicAlgorithms && !m_inputHasFreeDimension)  // batchSize changes to be smaller than MaxAlgoMBSize, need to re-do tuning if non-deterministic
@@ -545,11 +746,12 @@ private:
             {
                 // This branch handles two cases: a) When first MB comes through, and b) When input has free dimensions.
                 // If the handling of these two cases changes, we may need to create separate branches for them.
-                CUDNN_CALL(staticFinder(algo.selectedAlgo, true));
+                typename TAlgo::algoT selectedAlgo;
+                CUDNN_CALL(staticFinder(selectedAlgo, true));
                 algo.maxMBSizeSeen = batchSize;
                 // Here MaxAlgoWorkspaceSize is temporarily storing 'possible' need changed by staticFinder.
                 // Thus we don't set maxAlgo records and those will be tuned later.
-                algo.RecordAlgoBatchSizeWorkspaceSize(false, algo.selectedAlgo, batchSize, 0);
+                algo.RecordAlgoBatchSizeWorkspaceSize(false, selectedAlgo, batchSize, 0);
                 algo.autotuningState = m_inputHasFreeDimension ? AutotuningState::Running : AutotuningState::PendingTuning;
             }
             return;
@@ -608,8 +810,9 @@ private:
                 catch (...)
                 {   // fails again, let's fall back to cudnnGet
                     fprintf(stderr, "Fall back to use static finder to get the algorithm for convolution\n");
-                    CUDNN_CALL(staticFinder(algo.selectedAlgo, false));
-                    algo.RecordAlgoBatchSizeWorkspaceSize(true, algo.selectedAlgo, batchSize, curSize);
+                    typename TAlgo::algoT selectedAlgo;
+                    CUDNN_CALL(staticFinder(selectedAlgo, false));
+                    algo.RecordAlgoBatchSizeWorkspaceSize(true, selectedAlgo, batchSize, curSize);
                     algo.autotuningState = AutotuningState::Running;
                 }
             }
@@ -621,10 +824,16 @@ private:
         }
         else    // use fast/static method to get algorithm when batchsize get smaller. Avoid severe slowdown when batchsize change frequently
         {
-            CUDNN_CALL(staticFinder(algo.selectedAlgo, false));
-            algo.RecordAlgoBatchSizeWorkspaceSize(false, algo.selectedAlgo, batchSize, workspace.BufferSize());
+            typename TAlgo::algoT selectedAlgo;
+            CUDNN_CALL(staticFinder(selectedAlgo, false));
+            algo.RecordAlgoBatchSizeWorkspaceSize(false, selectedAlgo, batchSize, workspace.BufferSize());
             algo.autotuningState = AutotuningState::Running;
         }
+
+        algo.WorkspaceCols = workspace.GetNumCols();
+        algo.WorkspaceRows = workspace.GetNumRows();
+        m_registry->Register(*m_geometry, m_dataType, m_poolKind, m_poolIncludePad, m_forceDeterministicAlgorithms, algo);
+
         return;
     }
 
@@ -638,60 +847,8 @@ private:
     }
 
 private:
-    template <typename T>
-    struct ConvAlgoInfo
-    {
-        typedef T typeT;
-        ConvAlgoInfo()
-            : LastBatchAlgoMBSize(0), MaxAlgoMBSize(0), maxMBSizeSeen(0), autotuningState(AutotuningState::Init), MaxAlgoWorkspaceSize(0), LastBatchAlgoWorkspaceSize(0), AlgoMathType(CUDNN_TENSOR_OP_MATH)
-        {
-        }
-        // Variables to stores states
-        size_t maxMBSizeSeen; // Max minibatch size seen. If batch size exceed this number, redo tuning from scratch. maxAlgo is tuned for batchsize following this batch.
-
-        size_t MaxAlgoMBSize;   // Batch size when current work space is allocated. If batch size returns to this size, directly pick the maxAlgo
-        size_t MaxAlgoWorkspaceSize;   // First temporarily store possible workspace size for any algorithm, then store size for  maxAlgo after tunning
-
-        size_t LastBatchAlgoWorkspaceSize;  // workspace size for selectedAlgo
-        size_t LastBatchAlgoMBSize;        // minibatch size for selectedAlgo
-
-        size_t DeterministicAlgoWorkspaceSize;  // workspace size for deterministic algorithm
-
-        AutotuningState autotuningState;    // state of auto-tuning: Init, PendingTuning and Running
-        decltype(T::algo) selectedAlgo;     // currently selected algorithm
-        decltype(T::algo) maxAlgo;          // algorithm that was selected when the current workspace is allocated
-
-        cudnnMathType_t AlgoMathType;
-
-        bool NeedAutotuning(size_t batchSize, size_t workspaceSize)
-        {
-            // NVIDIA:
-            // It is not safe to assume that previously selected algorithm requires less or the same amount of workspace when minibatch size decrease
-            // Need to re-run auto-tuner everytime minibatch size grow.
-            // Use faster(may not be optimal) method to get algorithm when batchsize decrease
-            // Should remain reasonable performance when minibatch size changes frequently (e.g. distributed reading).
-            return (autotuningState != AutotuningState::Running ||
-                    batchSize != LastBatchAlgoMBSize ||
-                    workspaceSize < LastBatchAlgoWorkspaceSize);
-        }
-
-        // Record algorithm, batchsize and workspace right after tuning/init. Next batch will check to decide whether keep using recorded algorithm.
-        // If just tuned for MaxAlgo, also record that since maxAlgo tuning is heavy.
-        template <typename U>
-        void RecordAlgoBatchSizeWorkspaceSize(bool justTunedForMaxAlgo, U newAlgo, size_t batchSize, size_t workspaceSize)
-        {
-            selectedAlgo = newAlgo;
-            LastBatchAlgoMBSize = batchSize;
-            LastBatchAlgoWorkspaceSize = workspaceSize;
-
-            if (justTunedForMaxAlgo)
-            {
-                maxAlgo = newAlgo;
-                MaxAlgoMBSize = batchSize;
-                MaxAlgoWorkspaceSize = workspaceSize;
-            }
-        }
-    };
+    // Not going to manage the lifetime
+    CuDnnConvAlgoRegistry* m_registry;
 
     CuDnn::ptr_t m_cudnn;
     cudnnDataType_t m_dataType;
@@ -719,7 +876,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemT
                                                                                              bool forceDeterministicAlgorithms, bool poolIncludePad,
                                                                                              bool inputHasFreeDimension)
 {
-    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind,
+    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(algoRegistry.get(), geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind,
                                                               forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
 }
 
