@@ -323,8 +323,10 @@ cv::Rect CropTransformer::GetCropRectMultiView10(int viewIndex, int crow, int cc
 }
 
 // scaleMode = "fill" (default) - warp the image to the given target size
-// scaleMode = "crop" - resize the image's shorter side to the given target size and crops the overlap
-// scaleMode = "pad"  - resize the image's larger side to the given target size, center it and pad the rest
+// scaleMode = "crop" - resize the image such that it is as large as possible but at least one dimension's size is
+//                      equal to the corresponding target dimension.
+// scaleMode = "pad"  - resize the image such that both dimensions fit in the target size and the original image's
+//                      aspect ratio is preserved. Pad any remaining space.
 ScaleTransformer::ScaleTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
     m_imgWidth    = config(L"width");
@@ -380,11 +382,13 @@ void ScaleTransformer::Apply(uint8_t, cv::Mat &mat, int /* indexInBatch */)
         int width = mat.cols;
 
         // which dimension is our scaled one?
+        const double widthFactor = (double) m_imgWidth / (double) width;
+        const double heightFactor = (double) m_imgHeight / (double) height;
         bool scaleW;
         if (m_scaleMode == ScaleMode::Crop)
-            scaleW = width < height; // in "crop" mode we resize the smaller side
+            scaleW = widthFactor > heightFactor; // in "crop" mode we resize along the larger ratio
         else
-            scaleW = width > height; // else we resize the larger side
+            scaleW = widthFactor < heightFactor; // else we resize along the smaller ratio
 
         size_t targetW, targetH;
         if (scaleW)
