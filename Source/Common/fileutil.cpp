@@ -560,30 +560,6 @@ uint64_t fgetpos(FILE* f)
 void fsetpos(FILE* f, uint64_t reqpos)
 {
 #ifdef _MSC_VER // standard does not allow to cast between fpos_t and integer numbers, and indeed it does not work on Linux (but on Windows and GCC)
-#if (_MSC_VER <= 1800) // Note: this does not trigger if loaded in vs2013 mode in vs2015!
-    // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
-    // we generally read linearly but skip a few bytes or KB occasionally, as is
-    // the case in speech recognition tools. This requires a number of optimizations.
-
-    uint64_t curpos = fgetpos(f);
-    uint64_t cureob = curpos + f->_cnt; // UGH: we mess with an internal structure here
-    while (reqpos >= curpos && reqpos < cureob)
-    {
-        // if we made it then do not call fsetpos()
-        if (reqpos == fgetpos(f))
-            return;
-
-        // if we seek within the existing buffer, then just move to the position by dummy reads
-        char buf[65536];
-        size_t n = min((size_t) reqpos - (size_t) curpos, _countof(buf));
-        fread(buf, sizeof(buf[0]), n, f); // (this may fail, but really shouldn't)
-        curpos += n;
-
-        // since we mess with f->_cnt, if something unexpected happened to the buffer then back off
-        if (curpos != fgetpos(f) || curpos + f->_cnt != cureob)
-            break; // oops
-    }
-#else
     // special hack for VS CRT (for VS2015)
     // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
@@ -611,7 +587,6 @@ void fsetpos(FILE* f, uint64_t reqpos)
             return;
     }
 #undef MAX_FREAD_SKIP
-#endif // end special hack for VS CRT
 
     // actually perform the seek
     fpos_t post = reqpos;
