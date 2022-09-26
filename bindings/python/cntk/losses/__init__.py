@@ -432,6 +432,10 @@ def fmeasure(output, target, beta=1):
     balanced classes you should prefer cross_entropy instead.
     This operation works with both binary and multiclass classification.
 
+    An alternative form of this loss that may converge better is:
+
+        loss = - C.log(1 - fmeasure(output, target))
+    
     Args:
         output: the output values from the network
         target: it is usually a one-hot vector where the hot bit corresponds to the label index
@@ -450,7 +454,8 @@ def fmeasure(output, target, beta=1):
     else:
         axis = None
 
-    correct_predictions = C.reduce_sum(output * target, axis=axis)
-    precision = correct_predictions / C.reduce_sum(output, axis=axis)
-    recall = correct_predictions / C.reduce_sum(target, axis=axis)
+    e = C.Constant(0.00001)  # Ensures correct results when target is empty i.e. all pixel are "background"
+    correct_predictions = C.reduce_sum(output * target, axis=axis) + e
+    precision = correct_predictions / (C.reduce_sum(output, axis=axis) + e)
+    recall = correct_predictions / (C.reduce_sum(target, axis=axis) + e)
     return 1 - (1 + beta ** 2) * precision * recall / (beta ** 2 * precision + recall)
