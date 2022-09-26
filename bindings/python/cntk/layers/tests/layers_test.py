@@ -10,7 +10,7 @@ from cntk import Axis, reshape, sigmoid, element_max, Function, BlockFunction, C
                  get_default_override, default_override_or
 from cntk.layers import SequentialConvolution, Convolution, Convolution1D, Convolution2D, Convolution3D, Dense, Embedding, Fold, For, \
                         MaxPooling, MaxUnpooling, LSTM, GRU, RNNStep, Sequential, Stabilizer, Dropout, Recurrence, \
-                        RecurrenceFrom, LayerNormalization, ConvolutionTranspose
+                        RecurrenceFrom, LayerNormalization, ConvolutionTranspose, QRNN
 from cntk.layers.typing import Sequence, Signature, Tensor, SequenceOver
 
 import pytest
@@ -336,6 +336,15 @@ def test_recurrent_block(block_type, block_outputs_count, block_size, W_mult, H_
     expected = np.asarray(expected_res, dtype=np.float32)
 
     np.testing.assert_array_almost_equal(res[0], expected, decimal=6)
+
+
+def test_qrnn():
+    HIDDEN_DIM = 20
+    i = C.sequence.input_variable(10)
+    qrnn = QRNN(hidden_dim=HIDDEN_DIM)(i)
+    
+    assert qrnn.shape[0] == HIDDEN_DIM
+
 
 ####################################
 # Test dense layer for correctness
