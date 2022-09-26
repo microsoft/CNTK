@@ -973,7 +973,7 @@ namespace CNTK
                 axes.push_back(Axis(staticIdx));
             }
 
-            if (inputShape[i] != NDShape::FreeDimension || inputShape[i] != NDShape::InferredDimension)
+            if (inputShape[i] != NDShape::FreeDimension && inputShape[i] != NDShape::InferredDimension)
             {
                 staticIdx++;
             }

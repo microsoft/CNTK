@@ -1388,7 +1388,7 @@ private:
     {
         if (m_transforms.empty())
         {
-            m_transforms[0] = ComputeFilterTransform();
+            m_transforms.emplace_back(ComputeFilterTransform());
         }
         // else: transform already computed, no need to do it again.
     }

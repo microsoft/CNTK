@@ -7231,7 +7231,7 @@ bool CNTKToONNXHelper::IsPadValueValid(const std::vector<int64_t>& lowerPad, con
     // If this node has explicitly set the lowerPad and upperPad values(i.e. nodes that are constructed with lowerPad/upperPad values and autoPadding=False),
     // export these values directly. Otherwise, check autoPadding and export accordingly.
     bool isAllPadsZero = std::all_of(lowerPad.begin(), lowerPad.end(), [](int64_t i) { return i == 0; });
-    isAllPadsZero = isAllPadsZero & std::all_of(upperPad.begin(), upperPad.end(), [](int64_t i) { return i == 0; });
+    isAllPadsZero &= std::all_of(upperPad.begin(), upperPad.end(), [](int64_t i) { return i == 0; });
     bool isAnyAutoPadTrue = std::any_of(autoPadding.begin(), autoPadding.end(), [](bool i) { return i; });
     return lowerPad.size() > 0 && upperPad.size() > 0 && !(lowerPad.size() == 1 && upperPad.size() == 1 && lowerPad[0] == 0 && upperPad[0] == 0) && !(isAllPadsZero && ceilOutDim) && !isAnyAutoPadTrue;
 }
@@ -7288,7 +7288,7 @@ onnxruntime::Node* FindByName(onnxruntime::Graph* graph, const std::string &name
 {
     GraphNodes &nodes = graph->Nodes();
 
-    for (onnxruntime::GraphNodes::MutableNodeIterator it = nodes.begin(); it != nodes.begin(); ++it)
+    for (onnxruntime::GraphNodes::MutableNodeIterator it = nodes.begin(); it != nodes.end(); ++it)
     {
         onnxruntime::Node &node = *it;
 

@@ -522,7 +522,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
             }
         }
     }
-    catch (runtime_error err)
+    catch (runtime_error& err)
     {
         // In case caching reader/writer cannot be created, we gracefully fail over and disable caching.
         fprintf(stderr, "Error attemping to create Binary%s\n%s\n", found ? "Reader" : "Writer", err.what());

@@ -143,7 +143,8 @@ public:
         if (m_useAsyncBuffer && m_aysncBufferThread != nullptr && m_aysncBufferThread->joinable())
             m_aysncBufferThread->join();
 
-        delete m_bufferSwapIndex, m_deltaArray;
+        delete m_bufferSwapIndex;
+        delete m_deltaArray;
 
         for (size_t i = 0; i < m_localBufferNum; i++)
         {
@@ -517,8 +518,8 @@ private:
         {
             factor = (samplesSinceLastSync + 0.0f) / nTotalSamples;
         }
-        factor = 1.0f / m_pMPI->NumNodesInUse();
-        return factor;
+        
+		return factor;
     }
 
     inline void transpose(ElemType *src, ElemType *dst, const int N, const int M)

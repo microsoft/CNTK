@@ -168,7 +168,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
                 initialSize = dataSize * 5 / 4; // make the initalSize slightly larger than needed for data
             file = new SectionFile(wfile, fileOptionsReadWrite, initialSize);
             m_secFiles[wfile] = file;
-            parentSection = file->FileSection();
+            *parentSection = *file->FileSection();
             parentSection->SetElementCount(records);
             parentSection->SetFileUniqueId(this->m_uniqueID);
         }
