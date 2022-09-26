@@ -128,7 +128,7 @@ class CrossProcessMutex
 public:
     CrossProcessMutex(const std::string& name)
         : m_fd(-1),
-          m_fileName("/var/lock/" + name)
+          m_fileName("/tmp/" + name)
     {
     }
 
