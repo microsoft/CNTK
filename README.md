@@ -90,7 +90,7 @@ To setup build and runtime environment on Windows:
     [DevInstall.ps1](../Tools/devInstall/Windows/DevInstall.ps1)
 * Start Visual Studio 2017 and open [CNTK.sln](./CNTK.sln).
 
-To setup build and runtime environment on Linux using docker, please build Unbuntu 16.04 docker image using Dockerfiles [here](./Tools/docker). For other Linux systems, please refer to the Dockerfiles to setup dependent libraries for CNTK.
+To setup build and runtime environment on Linux using docker, please build Ubuntu 16.04 docker image using Dockerfiles [here](./Tools/docker). For other Linux systems, please refer to the Dockerfiles to setup dependent libraries for CNTK.
 
 ## Support advance RNN loop in ONNX export
 CNTK models with recursive loops can be exported to ONNX models with scan ops.
