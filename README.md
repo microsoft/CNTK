@@ -48,7 +48,7 @@ You can learn more about using and contributing to CNTK with the following resou
 
 Dear community, 
 
-With our ongoing contributions to ONNX and the ONNX Runtime, we have made it easier to interoperate within the AI framework ecosystem and to access high performance, cross-platform inferencing capabilities for both traditional ML models and deep neural networks. Over the last few years we have been privileged to develop such key open-source machine learning projects, including the Microsoft Cognitive Toolkit, which has enabled its users to leverage industry-wide advancements in deep learning at scale. 
+With our ongoing contributions to ONNX and the ONNX Runtime, we have made it easier to interoperate within the AI framework ecosystem and to access high performance, cross-platform inferencing capabilities for both traditional ML models and deep neural networks. Over the last few years, we have been privileged to develop such key open-source machine learning projects, including the Microsoft Cognitive Toolkit, which has enabled its users to leverage industry-wide advancements in deep learning at scale. 
 
 Today’s 2.7 release will be the last main release of CNTK. We may have some subsequent minor releases for bug fixes, but these will be evaluated on a case-by-case basis. There are no plans for new feature development post this release. 
 
@@ -90,7 +90,7 @@ To setup build and runtime environment on Windows:
     [DevInstall.ps1](../Tools/devInstall/Windows/DevInstall.ps1)
 * Start Visual Studio 2017 and open [CNTK.sln](./CNTK.sln).
 
-To setup build and runtime environment on Linux using docker, please build Unbuntu 16.04 docker image using Dockerfiles [here](./Tools/docker). For other Linux systems, please refer to the Dockerfiles to setup dependent libraries for CNTK.
+To setup build and runtime environment on Linux using docker, please build Ubuntu 16.04 docker image using Dockerfiles [here](./Tools/docker). For other Linux systems, please refer to the Dockerfiles to setup dependent libraries for CNTK.
 
 ## Support advance RNN loop in ONNX export
 CNTK models with recursive loops can be exported to ONNX models with scan ops.
