@@ -19,6 +19,18 @@
   <PropertyGroup>
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'RuntimeIdentifier' ">
+    <OutputPath>bin\RuntimeIdentifier\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'RuntimeIdentifiers' ">
+    <OutputPath>bin\RuntimeIdentifiers\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'TRACEDESIGNTIME = true' ">
+    <OutputPath>bin\TRACEDESIGNTIME = true\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'TRACEDESIGNTIME=true' ">
+    <OutputPath>bin\TRACEDESIGNTIME=true\</OutputPath>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\bindings\python\cntk\ops\tests\block_test.py">
       <Link>Tests\cntk\ops\tests\block_test.py</Link>

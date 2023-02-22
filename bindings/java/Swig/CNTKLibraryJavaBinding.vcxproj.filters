@@ -51,6 +51,8 @@
     <None Include="..\..\common\CNTKWarnFilters.i">
       <Filter>Interface Files</Filter>
     </None>
+    <None Include="CNTKNativeUtils.java" />
+    <None Include="post-build.cmd" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="cntk_java.i">
