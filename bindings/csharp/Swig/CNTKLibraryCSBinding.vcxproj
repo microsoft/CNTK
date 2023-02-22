@@ -1,13 +1,33 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug_CpuOnly|Win32">
+      <Configuration>Debug_CpuOnly</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_CpuOnly|Win32">
+      <Configuration>Release_CpuOnly</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|Win32">
+      <Configuration>Release_NoOpt</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release_NoOpt|x64">
       <Configuration>Release_NoOpt</Configuration>
       <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
@@ -19,6 +39,38 @@
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release_CpuOnly|x64">
       <Configuration>Release_CpuOnly</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RuntimeIdentifiers|Win32">
+      <Configuration>RuntimeIdentifiers</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RuntimeIdentifiers|x64">
+      <Configuration>RuntimeIdentifiers</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RuntimeIdentifier|Win32">
+      <Configuration>RuntimeIdentifier</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RuntimeIdentifier|x64">
+      <Configuration>RuntimeIdentifier</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="TRACEDESIGNTIME = true|Win32">
+      <Configuration>TRACEDESIGNTIME = true</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="TRACEDESIGNTIME = true|x64">
+      <Configuration>TRACEDESIGNTIME = true</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="TRACEDESIGNTIME=true|Win32">
+      <Configuration>TRACEDESIGNTIME=true</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="TRACEDESIGNTIME=true|x64">
+      <Configuration>TRACEDESIGNTIME=true</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
@@ -38,6 +90,39 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='RuntimeIdentifier|x64'">
+    <PlatformToolset />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RuntimeIdentifiers|x64'" Label="Configuration">
+    <PlatformToolset />
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|Win32'">
+    <PlatformToolset />
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='RuntimeIdentifier|Win32'">
+    <PlatformToolset />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RuntimeIdentifiers|Win32'" Label="Configuration">
+    <PlatformToolset />
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <PlatformToolset />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='TRACEDESIGNTIME=true|Win32'" Label="Configuration">
+    <PlatformToolset />
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <PlatformToolset />
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='TRACEDESIGNTIME = true|Win32'">
+    <PlatformToolset />
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|Win32'">
+    <PlatformToolset />
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|Win32'">
+    <PlatformToolset />
   </PropertyGroup>
   <!--Importing CPP defaults must occur after declaring the desired toolset above
   Otherwise, the build may default back to an previous toolset -->
@@ -108,11 +193,15 @@
       <Outputs>cntk_cs_wrap.cxx; cntk_cs_warp.h</Outputs>
       <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h;$(SolutionDir)Source\Common\Include\ExceptionWithCallStack.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;$(SolutionDir)bindings\common\CNTKExceptionHandling.i;$(SolutionDir)bindings\common\CNTKManagedCommon.i;std_unordered_map.i</AdditionalInputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='TRACEDESIGNTIME=true|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='TRACEDESIGNTIME = true|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='TRACEDESIGNTIME=true|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='TRACEDESIGNTIME = true|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>

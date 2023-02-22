@@ -22,7 +22,7 @@
 	
     <Platforms>x64</Platforms>
     
-    <Configurations>Debug;Debug_CpuOnly;Release;Release_CpuOnly;Release_NoOpt</Configurations>
+    <Configurations>Debug;Debug_CpuOnly;Release;Release_CpuOnly;Release_NoOpt;TRACEDESIGNTIME = true;RuntimeIdentifier;RuntimeIdentifiers;TRACEDESIGNTIME=true</Configurations>
     <PlatformTarget>x64</PlatformTarget>
 	<DebugType>portable</DebugType>
 	

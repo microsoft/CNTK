@@ -144,7 +144,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         /// Handle CNTK exceptions.
         /// </summary>
         /// <param name="ex">The exception to be handled.</param>
+#pragma warning disable CS0246 // Typ nebo název oboru názvů CNTKException se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?)
         private static void OnCNTKException(CNTKException ex)
+#pragma warning restore CS0246 // Typ nebo název oboru názvů CNTKException se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?)
         {
             // The pattern "Inner Exception" is used by End2EndTests to catch test failure.
             Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");

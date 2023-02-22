@@ -30,7 +30,7 @@
   
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Configurations>Debug;Release;Release_CpuOnly;Debug_CpuOnly;Release_NoOpt</Configurations>
+    <Configurations>Debug;Release;Release_CpuOnly;Debug_CpuOnly;Release_NoOpt;TRACEDESIGNTIME = true;RuntimeIdentifier;RuntimeIdentifiers;TRACEDESIGNTIME=true</Configurations>
     <Platforms>x64</Platforms>
     <AssemblyName>Cntk.Core.Managed-$(CntkComponentVersion)</AssemblyName>
     <NoWarn />

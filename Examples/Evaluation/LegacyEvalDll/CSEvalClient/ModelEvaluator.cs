@@ -31,7 +31,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         /// <summary>
         /// The cntk model evaluation instance
         /// </summary>
+#pragma warning disable CS0246 // Typ nebo název oboru názvů IEvaluateModelManagedF se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?)
         private readonly IEvaluateModelManagedF m_model;
+#pragma warning restore CS0246 // Typ nebo název oboru názvů IEvaluateModelManagedF se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?)
 
         /// <summary>
         /// The input layer key
