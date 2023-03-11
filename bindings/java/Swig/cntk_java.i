@@ -18,7 +18,21 @@
 
 %pragma(java) jniclasscode=%{
   static {
+<<<<<<< HEAD
       CNTKNativeUtils.loadAll();
+=======
+    String libName = "Cntk.Core.JavaBinding-2.2";
+    try {
+       System.loadLibrary(libName);
+    } catch (UnsatisfiedLinkError e) {
+       try {
+           System.loadLibrary(libName+'d');
+       } catch (UnsatisfiedLinkError e2) {
+          System.err.println("Native code library failed to load. \n" + e2);
+          System.exit(1);
+       }
+    }
+>>>>>>> origin/Compliance2.2
   }
 %}
 

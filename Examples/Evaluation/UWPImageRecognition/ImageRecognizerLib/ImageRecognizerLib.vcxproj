@@ -103,12 +103,20 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+<<<<<<< HEAD
     <Import Project="..\packages\CNTK.UWP.CPUOnly.2.7.0\build\native\CNTK.UWP.CPUOnly.targets" Condition="Exists('..\packages\CNTK.UWP.CPUOnly.2.7.0\build\native\CNTK.UWP.CPUOnly.targets')" />
+=======
+    <Import Project="..\packages\CNTK.UWP.CPUOnly.2.2.0\build\native\CNTK.UWP.CPUOnly.targets" Condition="Exists('..\packages\CNTK.UWP.CPUOnly.2.2.0\build\native\CNTK.UWP.CPUOnly.targets')" />
+>>>>>>> origin/Compliance2.2
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
+<<<<<<< HEAD
     <Error Condition="!Exists('..\packages\CNTK.UWP.CPUOnly.2.7.0\build\native\CNTK.UWP.CPUOnly.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.UWP.CPUOnly.2.7.0\build\native\CNTK.UWP.CPUOnly.targets'))" />
+=======
+    <Error Condition="!Exists('..\packages\CNTK.UWP.CPUOnly.2.2.0\build\native\CNTK.UWP.CPUOnly.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.UWP.CPUOnly.2.2.0\build\native\CNTK.UWP.CPUOnly.targets'))" />
+>>>>>>> origin/Compliance2.2
   </Target>
 </Project>

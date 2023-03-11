@@ -32,8 +32,28 @@
     <StartupObject />
 
   </PropertyGroup>
+<<<<<<< HEAD
   
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+=======
+  <!-- Explicitly defines the version of the dependent assemblies to avoid build errors or stale binaries. -->
+  <!-- The change of CntkComponentVersion in CNTK.Common.props cannot be populated correctly without restarting VS and cleaning solution. -->
+  <PropertyGroup>
+    <CntkCsAssemblyVersion>2.2</CntkCsAssemblyVersion>
+    <CntkCsAssemblyVersion Condition="$(DebugBuild)">$(CntkCsAssemblyVersion)d</CntkCsAssemblyVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(DebugBuild)">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(ReleaseBuild)">
+    <DebugType>pdbonly</DebugType>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <!-- The following definitions are needed in order to make the configuration Debug/Debug_CpuOnly live -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+>>>>>>> origin/Compliance2.2
     <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
   

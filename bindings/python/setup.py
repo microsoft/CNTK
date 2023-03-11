@@ -215,7 +215,11 @@ else:
     ]
     extra_link_args = [] # TODO: LINKER_DEBUG_ARG is not passed in to avoid compilation error
 
+<<<<<<< HEAD
     # Expecting the dependent libs (libcntklibrary-[CNTK_COMPONENT_VERSION].so, etc.) inside
+=======
+    # Expecting the dependent libs (libcntklibrary-2.2.so, etc.) inside
+>>>>>>> origin/Compliance2.2
     # site-packages/cntk/libs.
     runtime_library_dirs = ['$ORIGIN/cntk/libs']
     os.environ["CXX"] = "mpic++"
@@ -263,8 +267,13 @@ cntk_install_requires = [
 if IS_PY2:
     cntk_install_requires.append('enum34>=1.1.6')
 
+<<<<<<< HEAD
 setup(name=project_name,
       version=os.environ['CNTK_VERSION'],
+=======
+setup(name="cntk",
+      version="2.2",
+>>>>>>> origin/Compliance2.2
       url="http://cntk.ai",
       description = 'CNTK is an open-source, commercial-grade deep learning framework.',
       long_description = read_file('setup_py_long_description.md'),

@@ -105,8 +105,13 @@ class QLearning(AgentBaseClass):
         # TODO: allow user to specify learner through config file.
         opt = C.learners.adam(
             self._q.parameters,
+<<<<<<< HEAD
             C.learners.learning_parameter_schedule_per_sample(
                 self._parameters.initial_eta),
+=======
+            C.learners.learning_rate_schedule(
+                self._parameters.initial_eta, C.learners.UnitType.sample),
+>>>>>>> origin/Compliance2.2
             use_mean_gradient=True,
             momentum=C.learners.momentum_schedule(self._parameters.momentum),
             variance_momentum=C.learners.momentum_schedule(0.999),

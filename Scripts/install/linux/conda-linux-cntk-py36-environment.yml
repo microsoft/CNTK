@@ -26,8 +26,12 @@ dependencies:
 - wheel=0.29.0=py36_0
 - protobuf=3.6.1
 - pip:
+<<<<<<< HEAD
   - easydict==1.6.0
   - gym[atari]==0.8.1
+=======
+  - gym==0.8.1
+>>>>>>> origin/Compliance2.2
   - keras==2.0.6
   - pydot-ng==1.0.0
   - pygame==1.9.3

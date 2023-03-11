@@ -3,6 +3,7 @@
 # for full license information.
 # ==============================================================================
 
+<<<<<<< HEAD
 import os
 os.environ["PATH"] += os.pathsep + os.path.join(os.path.dirname(__file__), 'libs')
 cntk_library_path=os.pathsep + os.path.join(os.path.dirname(__file__), 'libs')
@@ -21,6 +22,9 @@ del version_file
 from . import cntk_py_init
 cntk_py_init.cntk_check_distro_info()
 cntk_py_init.cntk_check_libs()
+=======
+__version__ = '2.2'
+>>>>>>> origin/Compliance2.2
 
 import numpy as np
 
