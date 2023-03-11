@@ -622,11 +622,15 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
+<<<<<<< HEAD
 #ifndef CNTK_VERSION_BANNER
 #error CNTK_VERSION_BANNER must be set
 #endif
 #define MACRO_TO_STRING(s) #s
     fprintf(stderr, "CNTK %s (", MACRO_TO_STRING(CNTK_VERSION_BANNER));
+=======
+    fprintf(stderr, "CNTK 2.2 (");
+>>>>>>> origin/Compliance2.2
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif

@@ -32,8 +32,26 @@
     <OutputType>Exe</OutputType>
     <StartupObject />
   </PropertyGroup>
+<<<<<<< HEAD
 
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+=======
+  <PropertyGroup>
+    <CntkCsAssemblyVersion>2.2</CntkCsAssemblyVersion>
+    <CntkCsAssemblyVersion Condition="$(DebugBuild)">$(CntkCsAssemblyVersion)d</CntkCsAssemblyVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(DebugBuild)">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(ReleaseBuild)">
+    <DebugType>pdbonly</DebugType>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <!-- The following definitions are needed in order to make the configuration Debug/Debug_CpuOnly live -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+>>>>>>> origin/Compliance2.2
     <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
   
@@ -68,9 +86,36 @@
   </ItemGroup>
 
   <ItemGroup>
+<<<<<<< HEAD
     <PackageReference Include="CoreCompat.System.Drawing" Version="1.0.0-beta006" />
     
     <ProjectReference Include="..\..\..\..\bindings\csharp\CNTKLibraryManagedDll\CNTKLibraryManagedDll.csproj" />
+=======
+    <Compile Include="..\..\..\..\Examples\Evaluation\ImageExtension\CNTKImageProcessing.cs">
+      <Link>CNTKImageProcessing.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\CifarResNetClassifier.cs">
+      <Link>CifarResNetClassifier.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\LogisticRegression.cs">
+      <Link>LogisticRegression.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\LSTMSequenceClassifier.cs">
+      <Link>LSTMSequenceClassifier.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\MNISTClassifier.cs">
+      <Link>MNISTClassifier.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\TestHelper.cs">
+      <Link>TestHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\TransferLearning.cs">
+      <Link>TransferLearning.cs</Link>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SimpleFeedForwardClassifierTest.cs" />
+>>>>>>> origin/Compliance2.2
   </ItemGroup>
 
 </Project>

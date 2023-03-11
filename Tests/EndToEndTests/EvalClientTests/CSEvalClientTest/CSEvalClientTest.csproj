@@ -22,7 +22,16 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
+<<<<<<< HEAD
 
+=======
+  <!-- Explicitly defines the version of the dependent assemblies to avoid build errors or stale binaries -->
+  <!-- The change of CntkComponentVersion in CNTK.Common.props cannot be populated correctly without restarting VS and cleaning solution. -->
+  <PropertyGroup>
+    <CntkCsAssemblyVersion>2.2</CntkCsAssemblyVersion>
+    <CntkCsAssemblyVersion Condition="$(DebugBuild)">$(CntkCsAssemblyVersion)d</CntkCsAssemblyVersion>
+  </PropertyGroup>
+>>>>>>> origin/Compliance2.2
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
